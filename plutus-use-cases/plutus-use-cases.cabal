@@ -35,6 +35,7 @@ library
         Plutus.Contracts.Escrow
         Plutus.Contracts.SimpleEscrow
         Plutus.Contracts.Future
+        Plutus.Contracts.Game
         Plutus.Contracts.GameStateMachine
         Plutus.Contracts.Governance
         Plutus.Contracts.MultiSig
@@ -68,27 +69,28 @@ library
                  -- See Plutus Tx readme
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     build-depends:
+        playground-common -any,
+        plutus-contract -any,
+        plutus-core -any,
+        plutus-ledger -any,
+        plutus-ledger-api -any,
+        plutus-ledger-constraints -any,
+        plutus-tx -any
+    build-depends:
         base -any,
         aeson -any,
         bytestring -any,
         containers -any,
-        mtl -any,
-        plutus-core -any,
-        plutus-tx -any,
-        plutus-contract -any,
-        playground-common -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-ledger-constraints -any,
-        template-haskell -any,
-        lens -any,
-        text -any,
-        prettyprinter -any,
-        hashable -any,
         freer-simple -any,
+        hashable -any,
+        lens -any,
+        mtl -any,
+        openapi3 -any,
+        prettyprinter -any,
         streaming -any,
         semigroups -any,
-        openapi3 -any
+        template-haskell -any,
+        text -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any
@@ -109,6 +111,7 @@ test-suite plutus-use-cases-test
         Spec.Escrow
         Spec.SimpleEscrow
         Spec.Future
+        Spec.Game
         Spec.GameStateMachine
         Spec.Governance
         Spec.MultiSig
@@ -175,6 +178,7 @@ executable plutus-use-cases-scripts
         Spec.Escrow
         Spec.SimpleEscrow
         Spec.Future
+        Spec.Game
         Spec.GameStateMachine
         Spec.Governance
         Spec.MultiSig

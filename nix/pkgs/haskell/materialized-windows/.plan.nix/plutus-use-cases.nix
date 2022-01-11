@@ -33,27 +33,27 @@
     components = {
       "library" = {
         depends = [
+          (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
+          (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+          (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
+          (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+          (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
+          (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
+          (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
-          (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
-          (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
-          (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
-          (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
-          (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
-          (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
-          (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
-          (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
-          (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
-          (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-          (hsPkgs."text" or (errorHandler.buildDepError "text"))
-          (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
-          (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
           (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
+          (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
+          (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+          (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+          (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+          (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."streaming" or (errorHandler.buildDepError "streaming"))
           (hsPkgs."semigroups" or (errorHandler.buildDepError "semigroups"))
-          (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+          (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
+          (hsPkgs."text" or (errorHandler.buildDepError "text"))
           ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"));
         buildable = true;
         modules = [
@@ -67,6 +67,7 @@
           "Plutus/Contracts/Escrow"
           "Plutus/Contracts/SimpleEscrow"
           "Plutus/Contracts/Future"
+          "Plutus/Contracts/Game"
           "Plutus/Contracts/GameStateMachine"
           "Plutus/Contracts/Governance"
           "Plutus/Contracts/MultiSig"
@@ -143,6 +144,7 @@
             "Spec/Escrow"
             "Spec/SimpleEscrow"
             "Spec/Future"
+            "Spec/Game"
             "Spec/GameStateMachine"
             "Spec/Governance"
             "Spec/MultiSig"
@@ -199,6 +201,7 @@
             "Spec/Escrow"
             "Spec/SimpleEscrow"
             "Spec/Future"
+            "Spec/Game"
             "Spec/GameStateMachine"
             "Spec/Governance"
             "Spec/MultiSig"

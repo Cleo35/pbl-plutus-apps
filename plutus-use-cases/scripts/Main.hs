@@ -1,10 +1,6 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 module Main(main, ExportTx(..)) where
@@ -21,6 +17,7 @@ import Plutus.Trace (Command (..), ScriptsConfig (..), showStats, writeScriptsTo
 import Spec.Currency qualified as Currency
 import Spec.Escrow qualified as Escrow
 import Spec.Future qualified as Future
+import Spec.Game qualified as Game
 import Spec.GameStateMachine qualified as GameStateMachine
 import Spec.MultiSig qualified as MultiSig
 import Spec.MultiSigStateMachine qualified as MultiSigStateMachine
@@ -102,6 +99,8 @@ writeScripts config = do
         , ("future-increase-margin", Future.increaseMarginTrace, def)
         , ("future-settle-early", Future.settleEarlyTrace, def)
         , ("future-pay-out", Future.payOutTrace, def)
+        , ("game-success_1", Game.successTrace, def)
+        , ("game-success_2", Game.successTrace2, def)
         , ("game-sm-success_1", GameStateMachine.successTrace, def)
         , ("game-sm-success_2", GameStateMachine.successTrace2, def)
         , ("multisig-success", MultiSig.succeedingTrace, def)
