@@ -1,6 +1,6 @@
 /*eslint-env node*/
 /*global global*/
-import './static/main.css';
+import './static/main.scss';
 
 import('./src/Main.purs')
   .then(m => m.main())

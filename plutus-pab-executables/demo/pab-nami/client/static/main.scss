@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700');
+@import url("https://cdnjs.cloudflare.com/ajax/libs/tachyons/4.9.1/tachyons.min.css");
+// @import 'variables.scss';
+// @import 'layout.scss';
+
+.loader {
+  border: 16px solid #f3f3f3; /* Light grey */
+  border-top: 16px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+nav {
+  display: flex;
+  border-bottom: 1px solid #d0cfcf;
+
+  span {
+    font-weight: 600;
+    margin-right: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  ul {
+    display: flex;
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 0;
+
+    li a {
+      display: block;
+      padding: 0.5rem 1rem;
+      text-decoration: underline;
+    }
+  }
+}
+
+// .game ul {
+//   background: #e7e7e9;
+//   border-color: #1e73ad;
+//   border-width: 2px;
+//   border-bottom: 1px solid #dee2e6;
+//   display: flex;
+//   flex-wrap: wrap;
+//   padding-left: 0;
+//   margin-top: 0;
+//   margin-bottom: 0;
+//   list-style-type: none;
+
+//   li {
+//     margin-bottom: -2px;
+//     background: #f8f9fa;
+//     padding-right: 3rem;
+
+//     a {
+//       display: block;
+//       padding: 0.5rem 1rem;
+//     }
+//   }
+
+//   .nav-link.active {
+//     border-color: #1e73ad;
+//     border-bottom-color: transparent;
+//     background: #e7e7e9;
+//   }
+// }
+
+.nav-link {
+  border: 1px solid transparent;
+  display: block;
+  padding: 0.5rem 1rem;
+}
+
+.nav-link.active {
+  color: #1e73ad;
+}
+
+.navbar-text {
+  display: inline-block;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-right: 1rem;
+}

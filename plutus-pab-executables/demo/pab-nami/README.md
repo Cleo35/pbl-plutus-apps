@@ -4,11 +4,11 @@ This is a very simple demo application featuring the use of a browser/light wall
 
 ## Context
 
-In this demo, we want to showcase a very minimal example of how to integrate the PAB with a light wallet. It uses the `PayToWallet` contract in the PAB which has *no* Plutus on-chain validation code. Therefore, we simply use the PAB to construct a partial/unbalanced transaction and make it available to a frontend application. It doesn't use a local Cardano node, nor the chain index. Here's an outline of the general interactions:
+In this demo, we want to showcase a some examples of how to integrate the PAB with a light wallet. It currently uses the `PayToWallet`, and `Game` contract in the PAB. We use the PAB to construct a partial/unbalanced transaction and make it available to a frontend application for balancing, signing and submitting. It doesn't use a local Cardano node, nor the chain index. Here's an outline of the general interactions:
 
 1. The frontend application should have access to a light/browser wallet (in this case, Nami)
-2. The frontend application activates the `PayToWallet` contract throught the PAB.
-3. The frontend application calls the `PayToWallet` contract PAB endpoint with the recipient's payment key hash and stake key hash, and the amount to send in Lovelace.
+2. The frontend application activates the `PayToWallet` or `Game` contract throught the PAB.
+3. The frontend application calls the `PayToWallet` or `Game` contract PAB endpoint.
 4. The PAB constructs a partial/unbalanced transaction and makes it available through it's contract instance's status endpoint.
 5. The frontend application fetches this partial/unbalanced transaction. It then balances it and signs it using the Nami wallet api.
 6. Finally, the frontend application submits the final transaction using the Nami wallet api (which in turn, uses the blockfrost API).

@@ -1,4 +1,4 @@
-module PaymentForm where
+module Form.PayToWallet.PaymentForm where
 
 import Prologue
 import AppM (AppM)
