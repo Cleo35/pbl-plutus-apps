@@ -97,10 +97,10 @@ logProgress broadcastChan = do
         case syncState of
           NotSyncing -> do
               logWarn $ SyncLog syncState syncStats (fromMicroseconds delay)
-              go chan 300_000_000 -- 300s
+              go chan 30_000_000 -- 300s
           Synced -> do
               logInfo $ SyncLog syncState syncStats (fromMicroseconds delay)
-              go chan 300_000_000 -- 300s
+              go chan 30_000_000 -- 300s
           Syncing _ -> do
               logInfo $ SyncLog syncState syncStats (fromMicroseconds delay)
               go chan 30_000_000 -- 30s

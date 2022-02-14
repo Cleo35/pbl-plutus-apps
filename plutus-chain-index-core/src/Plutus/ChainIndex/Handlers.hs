@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeApplications      #-}
@@ -21,7 +22,7 @@ module Plutus.ChainIndex.Handlers
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
 import Control.Lens (Lens', _Just, ix, view, (^?))
-import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined, deleteRows,
                                         selectList, selectOne, selectPage, updateRows)
@@ -29,10 +30,11 @@ import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
 import Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State (State, get, gets, put)
+import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import Data.FingerTree qualified as FT
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.Monoid (Ap (..))
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
@@ -61,6 +63,10 @@ import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..),
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
+
+import Formatting
+import Formatting.Clock
+import System.Clock
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 
@@ -291,11 +297,45 @@ handleControl ::
     , Member BeamEffect effs
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
+    , LastMember IO effs
     )
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
+    AppendBlocks blocks -> do
+        liftIO $ print "APPEND BLOCKS"
+        -- start <- liftIO $ getTime ProcessCPUTime
+        oldIndex <- get @ChainIndexState
+        case listToMaybe (reverse blocks) of
+            Nothing -> pure ()
+            Just (Block tip_ _) -> do
+                let transactions = concatMap (\(Block _ txs) -> txs) blocks
+                    newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
+                case UtxoState.insert newUtxoState oldIndex of
+                    Left err -> do
+                        let reason = InsertionFailed err
+                        logError $ Err reason
+                        throwError reason
+                    Right InsertUtxoSuccess{newIndex, insertPosition} -> do
+                        depth <- ask @Depth
+                        case UtxoState.reduceBlockCount depth newIndex of
+                          UtxoState.BlockCountNotReduced -> pure () -- put newIndex
+                          lbcResult -> do
+                            pure () -- put $ UtxoState.reducedIndex lbcResult
+                            reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
+                        -- end <- liftIO $ getTime ProcessCPUTime
+                        -- liftIO $ fprint (timeSpecs % "\n") start end
+                        -- start <- liftIO $ getTime ProcessCPUTime
+                        -- insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
+                        -- end <- liftIO $ getTime ProcessCPUTime
+                        -- liftIO $ fprint (timeSpecs % "\n") start end
+                        -- start <- liftIO $ getTime ProcessCPUTime
+                        insertUtxoDb newUtxoState
+                        -- end <- liftIO $ getTime ProcessCPUTime
+                        -- liftIO $ fprint (timeSpecs % "\n") start end
+                        logDebug $ InsertionSuccess tip_ insertPosition
     AppendBlock (Block tip_ transactions) -> do
+        liftIO $ print "APPEND BLOCK"
         oldIndex <- get @ChainIndexState
         let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
         case UtxoState.insert newUtxoState oldIndex of
@@ -306,14 +346,15 @@ handleControl = \case
             Right InsertUtxoSuccess{newIndex, insertPosition} -> do
                 depth <- ask @Depth
                 case UtxoState.reduceBlockCount depth newIndex of
-                  UtxoState.BlockCountNotReduced -> put newIndex
+                  UtxoState.BlockCountNotReduced -> pure () -- put newIndex
                   lbcResult -> do
-                    put $ UtxoState.reducedIndex lbcResult
+                    pure () -- put $ UtxoState.reducedIndex lbcResult
                     reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
                 insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
                 insertUtxoDb newUtxoState
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
+        liftIO $ print "ROLLBACK"
         oldIndex <- get @ChainIndexState
         case TxUtxoBalance.rollback tip_ oldIndex of
             Left err -> do
@@ -321,14 +362,20 @@ handleControl = \case
                 logError $ Err reason
                 throwError reason
             Right RollbackResult{newTip, rolledBackIndex} -> do
-                put rolledBackIndex
+                pure () -- put rolledBackIndex
                 rollbackUtxoDb $ tipAsPoint newTip
                 logDebug $ RollbackSuccess newTip
     ResumeSync tip_ -> do
+        liftIO $ print "ResumeSync"
         rollbackUtxoDb tip_
+        liftIO $ print "Rollbacked utxo db"
         newState <- restoreStateFromDb
-        put newState
+        liftIO $ print "restored stated fom db"
+        pure () -- put newState
+        liftIO $ print "put new state"
+        pure ()
     CollectGarbage -> do
+        liftIO $ print "COLLECTGARBAGE"
         -- Rebuild the index using only transactions that still have at
         -- least one output in the UTXO set
         utxos <- gets $

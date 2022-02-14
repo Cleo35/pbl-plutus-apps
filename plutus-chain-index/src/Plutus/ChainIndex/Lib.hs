@@ -29,6 +29,7 @@ module Plutus.ChainIndex.Lib (
     -- * Chain index effects
     , CI.handleChainIndexEffects
     , runChainIndexEffects
+    , runChainIndexDuringSync
     -- * Chain synchronisation
     , syncChainIndex
     -- ** Synchronisation handlers
@@ -135,9 +136,9 @@ type ChainSyncHandler = ChainSyncEvent -> IO ()
 -- | The default chain synchronisation event handler. Updates the in-memory state and the database.
 defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
 defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
-    (RollForward block _)  -> appendBlock block
-    (RollBackward point _) -> rollback point
-    (Resume point)         -> resumeSync point
+    (RollForward block _)  -> pure () -- appendBlock block
+    (RollBackward point _) -> pure () -- rollback point
+    (Resume point)         -> pure () -- resumeSync point
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler

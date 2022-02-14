@@ -21,6 +21,7 @@ module Plutus.ChainIndex.Effects(
     , getTip
     -- * Control effect
     , ChainIndexControlEffect(..)
+    , appendBlocks
     , appendBlock
     , rollback
     , resumeSync
@@ -85,6 +86,9 @@ data ChainIndexQueryEffect r where
 makeEffect ''ChainIndexQueryEffect
 
 data ChainIndexControlEffect r where
+
+    -- | Add new blocks to the chain index by giving a list blocks.
+    AppendBlocks :: [ChainSyncBlock] -> ChainIndexControlEffect ()
 
     -- | Add a new block to the chain index by giving a new tip and list of tx.
     AppendBlock :: ChainSyncBlock -> ChainIndexControlEffect ()

@@ -174,6 +174,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
+    AppendBlocks _ -> undefined
     AppendBlock (Block tip_ transactions) -> do
         oldState <- get @ChainIndexEmulatorState
         case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) (view utxoIndex oldState) of
