@@ -15,3 +15,14 @@ import Plutus.V1.Ledger.Value qualified as Value
 scriptCurrencySymbol :: MintingPolicy -> CurrencySymbol
 scriptCurrencySymbol scrpt = let (MintingPolicyHash hsh) = mintingPolicyHash scrpt in Value.CurrencySymbol hsh
 
+{-# INLINABLE adaLockedBy #-}
+-- | Get the total amount of 'Ada' locked by the given validator in this transaction.
+adaLockedBy :: TxInfo -> ValidatorHash -> Ada
+adaLockedBy ptx h = Ada.fromValue (valueLockedBy ptx h)
+
+{-# INLINABLE signsTransaction #-}
+-- | Check if the provided signature is the result of signing the pending
+--   transaction (without witnesses) with the given public key.
+signsTransaction :: Signature -> PubKey -> TxInfo -> Bool
+signsTransaction (Signature sig) (PubKey (LedgerBytes pk)) TxInfo{txInfoId=TxId h} =
+    verifySignature pk h sig

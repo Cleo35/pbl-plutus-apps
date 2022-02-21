@@ -42,8 +42,10 @@ library
     hs-source-dirs: src
     default-language: Haskell2010
     exposed-modules:
+        Data.Aeson.Extras
         Data.Time.Units.Extra
         Ledger
+        Ledger.Ada
         Ledger.Address
         Ledger.AddressMap
         Ledger.Blockchain
@@ -55,9 +57,11 @@ library
         Ledger.Orphans
         Ledger.Index
         Ledger.Scripts
+        Ledger.Slot
         Ledger.TimeSlot
         Ledger.Tokens
         Ledger.Tx
+        Ledger.TxId
         Ledger.Tx.CardanoAPI
         Ledger.Typed.Scripts
         Ledger.Typed.Scripts.MonetaryPolicies
@@ -67,15 +71,11 @@ library
         Ledger.Typed.TypeUtils
         Ledger.Value
     reexported-modules:
-        Data.Aeson.Extras,
         Data.Either.Extras,
-        Plutus.V1.Ledger.Ada as Ledger.Ada,
         Plutus.V1.Ledger.Bytes as Ledger.Bytes,
         Plutus.V1.Ledger.Credential as Ledger.Credential,
         Plutus.V1.Ledger.DCert as Ledger.DCert,
         Plutus.V1.Ledger.Interval as Ledger.Interval,
-        Plutus.V1.Ledger.Slot as Ledger.Slot,
-        Plutus.V1.Ledger.TxId as Ledger.TxId,
         Plutus.V1.Ledger.Time as Ledger.Time,
         -- The rest of the plutus-ledger-api modules are reexported from within
         -- the Haskell modules and not in the current cabal file.

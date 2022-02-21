@@ -44,6 +44,344 @@ import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 
+-- | Orphan instances for plutus-ledger-api data types.
+
+-- | General
+instance ToJSON BSS.ByteString where
+    toJSON = JSON.String . JSON.encodeByteString
+
+instance FromJSON BSS.ByteString where
+    parseJSON v = JSON.decodeByteString v
+
+instance ToJSON PlutusTx.BuiltinByteString where
+    toJSON = JSON.String . JSON.encodeByteString . PlutusTx.fromBuiltin
+
+instance FromJSON PlutusTx.BuiltinByteString where
+    parseJSON v = PlutusTx.toBuiltin <$> JSON.decodeByteString v
+
+-- | Plutus.V1.Ledger.Address
+
+deriving instance Hashable Address
+deriving instance FromJSON Address
+deriving instance FromJSONKey Address
+deriving instance Serialise Address
+deriving instance ToJSON Address
+deriving instance ToJSONKey Address
+
+deriving instance Hashable Credential
+deriving instance FromJSON Credential
+deriving instance Serialise Credential
+deriving instance ToJSON Credential
+
+deriving instance Hashable StakingCredential
+deriving instance FromJSON StakingCredential
+deriving instance Serialise StakingCredential
+deriving instance ToJSON StakingCredential
+
+-- | Plutus.V1.Ledger.Bytes
+
+deriving instance FromJSONKey LedgerBytes
+deriving instance Serialise LedgerBytes
+deriving instance ToJSONKey LedgerBytes
+
+instance FromJSON LedgerBytes where
+    parseJSON v = fromBytes <$> JSON.decodeByteString v
+
+instance ToJSON LedgerBytes where
+    toJSON = JSON.String . JSON.encodeByteString . bytes
+
+-- | Plutus.V1.Ledger.Crypto
+
+deriving instance Newtype PubKeyHash
+deriving instance FromJSON PubKeyHash
+deriving instance FromJSONKey PubKeyHash
+deriving instance Hashable PubKeyHash
+deriving instance Serialise PubKeyHash
+deriving instance ToJSON PubKeyHash
+deriving instance ToJSONKey PubKeyHash
+
+-- | Plutus.V1.Ledger.DCert
+
+deriving instance Hashable DCert
+deriving instance FromJSON DCert
+deriving instance Serialise DCert
+deriving instance ToJSON DCert
+
+-- | Plutus.V1.Ledger.Interval
+
+deriving instance Hashable Interval
+deriving instance FromJSON Interval
+deriving instance Serialise Interval
+deriving instance ToJSON Interval
+
+deriving instance Hashable Extended
+deriving instance FromJSON Extended
+deriving instance Serialise Extended
+deriving instance ToJSON Extended
+
+deriving instance Hashable UpperBound
+deriving instance FromJSON UpperBound
+deriving instance Serialise UpperBound
+deriving instance ToJSON UpperBound
+
+deriving instance Hashable LowerBound
+deriving instance FromJSON LowerBound
+deriving instance Serialise LowerBound
+deriving instance ToJSON LowerBound
+
+-- | Plutus.V1.Ledger.Scripts
+
+deriving instance FromJSON ScriptError
+deriving instance ToJSON ScriptError
+
+{- Note [JSON instances for Script]
+The JSON instances for Script are partially hand-written rather than going via the Serialise
+instance directly. The reason for this is to *avoid* the size checks that are in place in the
+Serialise instance. These are only useful for deserialisation checks on-chain, whereas the
+JSON instances are used for e.g. transmitting validation events, which often include scripts
+with the data arguments applied (which can be very big!).
+-}
+
+instance ToJSON Script where
+    -- See note [JSON instances for Script]
+    toJSON (Script p) = JSON.String $ JSON.encodeSerialise (SerialiseViaFlat p)
+
+instance FromJSON Script where
+    -- See note [JSON instances for Script]
+    parseJSON v = do
+        (SerialiseViaFlat p) <- JSON.decodeSerialise v
+        Haskell.return $ Script p
+
+deriving via (JSON.JSONViaSerialise PLC.Data) instance ToJSON PLC.Data
+deriving via (JSON.JSONViaSerialise PLC.Data) instance FromJSON PLC.Data
+
+deriving instance FromJSON Validator
+deriving instance ToJSON Validator
+
+instance BA.ByteArrayAccess Validator where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+
+deriving instance FromJSON Datum
+deriving instance Serialise Datum
+deriving instance ToJSON Datum
+
+instance BA.ByteArrayAccess Datum where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+
+deriving instance FromJSON Redeemer
+deriving instance Serialise Redeemer
+deriving instance ToJSON Redeemer
+
+instance BA.ByteArrayAccess Redeemer where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+
+deriving instance FromJSON MintingPolicy
+deriving instance ToJSON MintingPolicy
+
+instance BA.ByteArrayAccess MintingPolicy where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+
+deriving instance FromJSON StakeValidator
+deriving instance ToJSON StakeValidator
+
+instance BA.ByteArrayAccess StakeValidator where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+
+deriving instance Hashable ScriptHash
+deriving instance FromJSON ScriptHash
+deriving instance FromJSONKey ScriptHash
+deriving instance Serialise ScriptHash
+deriving instance ToJSON ScriptHash
+deriving instance ToJSONKey ScriptHash
+
+deriving instance Hashable ValidatorHash
+deriving instance FromJSON ValidatorHash
+deriving instance FromJSONKey ValidatorHash
+deriving instance Serialise ValidatorHash
+deriving instance ToJSON ValidatorHash
+deriving instance ToJSONKey ValidatorHash
+
+deriving instance Hashable DatumHash
+deriving instance FromJSON DatumHash
+deriving instance FromJSONKey DatumHash
+deriving instance Serialise DatumHash
+deriving instance ToJSON DatumHash
+deriving instance ToJSONKey DatumHash
+
+deriving instance Hashable RedeemerHash
+deriving instance FromJSON RedeemerHash
+deriving instance FromJSONKey RedeemerHash
+deriving instance Serialise RedeemerHash
+deriving instance ToJSON RedeemerHash
+deriving instance ToJSONKey RedeemerHash
+
+deriving instance Hashable MintingPolicyHash
+deriving instance FromJSON MintingPolicyHash
+deriving instance FromJSONKey MintingPolicyHash
+deriving instance Serialise MintingPolicyHash
+deriving instance ToJSON MintingPolicyHash
+deriving instance ToJSONKey MintingPolicyHash
+
+deriving instance Hashable StakeValidatorHash
+deriving instance FromJSON StakeValidatorHash
+deriving instance FromJSONKey StakeValidatorHash
+deriving instance Serialise StakeValidatorHash
+deriving instance ToJSON StakeValidatorHash
+deriving instance ToJSONKey StakeValidatorHash
+
+deriving instance FromJSON Context
+deriving instance ToJSON Context
+
+-- | Plutus.V1.Ledger.Time
+
+deriving instance Hashable DiffMilliSeconds
+deriving instance FromJSON DiffMilliSeconds
+deriving instance FromJSONKey DiffMilliSeconds
+deriving instance Serialise DiffMilliSeconds
+deriving instance ToJSON DiffMilliSeconds
+deriving instance ToJSONKey DiffMilliSeconds
+
+deriving instance FromJSONKey POSIXTime
+deriving instance Serialise POSIXTime
+deriving instance ToJSONKey POSIXTime
+
+-- | Custom `FromJSON` instance which allows to parse a JSON number to a
+-- 'POSIXTime' value. The parsed JSON value MUST be an 'Integer' or else the
+-- parsing fails.
+instance FromJSON POSIXTime where
+  parseJSON v@(Number n) =
+      either (\_ -> prependFailure "parsing POSIXTime failed, " (typeMismatch "Integer" v))
+             (Haskell.return . POSIXTime)
+             (floatingOrInteger n :: Either Haskell.Double Integer)
+  parseJSON invalid =
+      prependFailure "parsing POSIXTime failed, " (typeMismatch "Number" invalid)
+
+-- | Custom 'ToJSON' instance which allows to simply convert a 'POSIXTime'
+-- value to a JSON number.
+instance ToJSON POSIXTime where
+  toJSON (POSIXTime n) = Number $ scientific n 0
+
+-- | Plutus.V1.Ledger.Tx
+
+deriving instance FromJSON ScriptTag
+deriving instance Serialise ScriptTag
+deriving instance ToJSON ScriptTag
+
+deriving instance FromJSON RedeemerPtr
+deriving instance FromJSONKey RedeemerPtr
+deriving instance Serialise RedeemerPtr
+deriving instance ToJSON RedeemerPtr
+deriving instance ToJSONKey RedeemerPtr
+
+deriving instance FromJSON TxOutRef
+deriving instance FromJSONKey TxOutRef
+deriving instance Serialise TxOutRef
+deriving instance ToJSON TxOutRef
+deriving instance ToJSONKey TxOutRef
+
+deriving instance FromJSON TxInType
+deriving instance Serialise TxInType
+deriving instance ToJSON TxInType
+
+deriving instance FromJSON TxIn
+deriving instance Serialise TxIn
+deriving instance ToJSON TxIn
+
+deriving instance FromJSON TxOut
+deriving instance Serialise TxOut
+deriving instance ToJSON TxOut
+
+-- | Plutus.V1.Ledger.Value
+
+deriving instance FromJSONKey CurrencySymbol
+deriving instance Hashable CurrencySymbol
+deriving instance Serialise CurrencySymbol
+deriving instance ToJSONKey CurrencySymbol
+
+instance ToJSON CurrencySymbol where
+  toJSON c =
+    JSON.object
+      [ ( "unCurrencySymbol"
+        , JSON.String .
+          JSON.encodeByteString .
+          PlutusTx.fromBuiltin .
+          unCurrencySymbol $
+          c)
+      ]
+
+instance FromJSON CurrencySymbol where
+  parseJSON =
+    JSON.withObject "CurrencySymbol" $ \object -> do
+      raw <- object .: "unCurrencySymbol"
+      bytes <- JSON.decodeByteString raw
+      Haskell.pure $ CurrencySymbol $ PlutusTx.toBuiltin bytes
+
+deriving instance Hashable TokenName
+deriving instance Serialise TokenName
+
+{- note [Roundtripping token names]
+
+How to properly roundtrip a token name that is not valid UTF-8 through PureScript
+without a big rewrite of the API?
+We prefix it with a zero byte so we can recognize it when we get a bytestring value back,
+and we serialize it base16 encoded, with 0x in front so it will look as a hex string.
+(Browsers don't render the zero byte.)
+-}
+
+instance ToJSON TokenName where
+    toJSON = JSON.object . Haskell.pure . (,) "unTokenName" . JSON.toJSON .
+        fromTokenName
+            (\bs -> Text.cons '\NUL' (asBase16 bs))
+            (\t -> case Text.take 1 t of "\NUL" -> Text.concat ["\NUL\NUL", t]; _ -> t)
+
+instance FromJSON TokenName where
+    parseJSON =
+        JSON.withObject "TokenName" $ \object -> do
+        raw <- object .: "unTokenName"
+        fromJSONText raw
+        where
+            fromJSONText t = case Text.take 3 t of
+                "\NUL0x"       -> either Haskell.fail (Haskell.pure . tokenName) . JSON.tryDecode . Text.drop 3 $ t
+                "\NUL\NUL\NUL" -> Haskell.pure . fromText . Text.drop 2 $ t
+                _              -> Haskell.pure . fromText $ t
+
+deriving instance FromJSON AssetClass
+deriving instance Hashable AssetClass
+deriving instance Serialise AssetClass
+deriving instance ToJSON AssetClass
+
+deriving instance FromJSON Value
+deriving instance Hashable Value
+deriving instance Serialise Value
+deriving instance ToJSON Value
+
+-- Orphan instances for 'Map' to make this work
+instance (ToJSON v, ToJSON k) => ToJSON (Map.Map k v) where
+    toJSON = JSON.toJSON . Map.toList
+
+instance (FromJSON v, FromJSON k) => FromJSON (Map.Map k v) where
+    parseJSON v = Map.fromList Haskell.<$> JSON.parseJSON v
+
+deriving anyclass instance (Hashable k, Hashable v) => Hashable (Map.Map k v)
+deriving anyclass instance (Serialise k, Serialise v) => Serialise (Map.Map k v)
+
+-- | HttpApiData
+
 instance ToHttpApiData PrivateKey where
     toUrlPiece = toUrlPiece . getPrivateKey
 

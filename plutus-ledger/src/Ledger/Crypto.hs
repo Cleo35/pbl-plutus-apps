@@ -29,7 +29,48 @@ import Plutus.V1.Ledger.Bytes qualified as KB
 import Plutus.V1.Ledger.Crypto as Export hiding (PrivateKey)
 import PlutusTx.Prelude qualified as P
 
+-- | A cryptographic public key.
+newtype PubKey = PubKey { getPubKey :: LedgerBytes }
+    deriving stock (Eq, Ord, Generic)
+    deriving anyclass (Newtype, ToJSON, FromJSON, NFData)
+    deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
+    deriving IsString via LedgerBytes
+    deriving (Show, Pretty) via LedgerBytes
+makeLift ''PubKey
+
+instance ToJSONKey PubKey where
+  toJSONKey = ToJSONKeyValue (genericToJSON JSON.defaultOptions) JSON.toEncoding
+
+instance FromJSONKey PubKey where
+  fromJSONKey = FromJSONKeyValue (genericParseJSON JSON.defaultOptions)
+
 type PrivateKey = Crypto.XPrv
+
+-- | A message with a cryptographic signature.
+newtype Signature = Signature { getSignature :: PlutusTx.BuiltinByteString }
+    deriving stock (Eq, Ord, Generic)
+    deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, NFData, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
+    deriving (Show, Pretty) via LedgerBytes
+
+instance ToJSON Signature where
+  toJSON signature =
+    JSON.object
+      [ ( "getSignature"
+        , JSON.String .
+          JSON.encodeByteString .
+          PlutusTx.fromBuiltin .
+          getSignature $
+          signature)
+      ]
+
+instance FromJSON Signature where
+  parseJSON =
+    JSON.withObject "Signature" $ \object -> do
+      raw <- object .: "getSignature"
+      bytes <- JSON.decodeByteString raw
+      pure . Signature $ PlutusTx.toBuiltin bytes
+
+makeLift ''Signature
 
 -- | Passphrase newtype to mark intent
 newtype Passphrase =
