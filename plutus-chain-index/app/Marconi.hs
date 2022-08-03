@@ -71,6 +71,8 @@ data Options = Options
 parseOptions :: IO Options
 parseOptions = execParser $ info (optionsParser <**> helper) mempty
 
+hello = putStrLn "hello"
+
 optionsParser :: Parser Options
 optionsParser =
   Options
