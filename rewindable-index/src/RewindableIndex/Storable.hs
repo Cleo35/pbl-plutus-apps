@@ -42,6 +42,7 @@ import Data.Functor ((<&>))
 import Data.Vector qualified as V
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Mutable qualified as VM
+import Debug.Trace qualified as T
 import GHC.Generics (Generic)
 
 {-
@@ -266,8 +267,15 @@ flushBuffer s = do
   then do
     v  <- V.freeze es
     h' <- persistToStorage v (s ^. handle)
+    v' <- VM.new (s ^. config . memoryBufferSize)
+    -- T.trace (show $ s ^. storage . cursor) $ pure ()
+    -- T.trace (show $ s ^. config) $ pure ()
     pure $ s & storage . cursor .~ 0
              & handle .~ h'
+    -- pure $ s & storage .~ Storage { _events = v'
+    --                               , _cursor = 0
+    --                               }
+    --          & handle .~ h'
   else pure s
 
 insertMany

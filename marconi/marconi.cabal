@@ -49,6 +49,7 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Marconi.CLI
+    Marconi.Index.AddressDatum
     Marconi.Index.Datum
     Marconi.Index.New.ScriptTx
     Marconi.Index.ScriptTx
@@ -127,7 +128,14 @@ test-suite marconi-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   hs-source-dirs: test
-  other-modules:  Integration
+  other-modules:
+    Integration
+    Spec.Marconi.Index.AddressDatum
+    Spec.Marconi.Index.AddressDatum.AddressDatumIndex
+    Spec.Marconi.Index.AddressDatum.AddressDatumIndexEvent
+    Spec.Marconi.Index.AddressDatum.E2E
+    Spec.Marconi.Index.AddressDatum.Generators
+    Spec.Marconi.Index.AddressDatum.Utils
 
   --------------------
   -- Local components
@@ -142,9 +150,13 @@ test-suite marconi-test
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-ledger-core
     , cardano-testnet
     , iohk-monitoring
     , ouroboros-network
+    , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
@@ -160,6 +172,7 @@ test-suite marconi-test
     , filepath
     , hedgehog
     , hedgehog-extras
+    , lens
     , prettyprinter
     , serialise
     , stm

@@ -8,6 +8,7 @@ module Marconi.CLI
     , Options (..)
     , parseOptions
     , utxoDbPath
+    , addressDatumDbPath
     , datumDbPath
     , scriptTxDbPath
     ) where
@@ -93,14 +94,15 @@ parseCardanoAddresses =  nub
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
 data Options = Options
-  { optionsSocketPath      :: String,
-    optionsNetworkId       :: NetworkId,
-    optionsChainPoint      :: ChainPoint,
-    optionsDbPath          :: FilePath,    -- ^ SQLite database directory path
-    optionsDisableUtxo     :: Bool,
-    optionsDisableDatum    :: Bool,
-    optionsDisableScript   :: Bool,
-    optionsTargetAddresses :: Maybe TargetAddresses
+  { optionsSocketPath          :: String,
+    optionsNetworkId           :: NetworkId,
+    optionsChainPoint          :: ChainPoint,
+    optionsDbPath              :: FilePath,    -- ^ SQLite database directory path
+    optionsDisableUtxo         :: Bool,
+    optionsDisableAddressDatum :: Bool,
+    optionsDisableDatum        :: Bool,
+    optionsDisableScript       :: Bool,
+    optionsTargetAddresses     :: Maybe TargetAddresses
   }
   deriving (Show)
 parseOptions :: IO Options
@@ -121,8 +123,12 @@ optionsParser =
                       <> Opt.help "disable utxo indexers."
                       <> Opt.showDefault
                      )
+    <*> Opt.switch (Opt.long "disable-address-datum"
+                      <> Opt.help "disable Address->Datum indexers."
+                      <> Opt.showDefault
+                     )
     <*> Opt.switch (Opt.long "disable-datum"
-                      <> Opt.help "disable datum indexers."
+                      <> Opt.help "disable DatumHash->Datum indexers."
                       <> Opt.showDefault
                      )
     <*> Opt.switch (Opt.long "disable-script-tx"
@@ -131,7 +137,7 @@ optionsParser =
                      )
     <*> optAddressesParser (Opt.long "addresses-to-index"
                             <> Opt.short 'a'
-                            <> Opt.help ("Becch32 Shelley addresses to index."
+                            <> Opt.help ("Bech32 Shelley addresses to index."
                                    <> " i.e \"--address-to-index address-1 --address-to-index address-2 ...\"" ) )
 
 optAddressesParser :: Opt.Mod Opt.OptionFields [CardanoAddress] -> Opt.Parser (Maybe TargetAddresses)
@@ -139,6 +145,9 @@ optAddressesParser =  optional . multiString
 
 utxoDbName :: FilePath
 utxoDbName = "utxodb"
+
+addressDatumDbName :: FilePath
+addressDatumDbName = "addressDatumDb"
 
 datumDbName :: FilePath
 datumDbName = "datumdb"
@@ -148,6 +157,9 @@ scriptTxDbName = "scripttxdb"
 
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
+
+addressDatumDbPath :: Options -> Maybe FilePath
+addressDatumDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> addressDatumDbName)
 
 datumDbPath :: Options -> Maybe FilePath
 datumDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> datumDbName)

@@ -1,12 +1,9 @@
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE NamedFieldPuns         #-}
-{-# LANGUAGE PackageImports         #-}
-{-# LANGUAGE PatternSynonyms        #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE TupleSections         #-}
 
 module Marconi.Indexers where
 
@@ -30,14 +27,15 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as Byron
-import "cardano-api" Cardano.Api.Shelley qualified as Shelley
+import Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
+import Marconi.Index.AddressDatum (AddressDatumIndex)
+import Marconi.Index.AddressDatum qualified as AddressDatum
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.New.ScriptTx qualified as NewScriptTx
-import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Types (TargetAddresses, TxOutRef, pattern CurrentEra, txOutRef)
@@ -155,7 +153,32 @@ datumWorker Coordinator{_barrier} ch path = Datum.open path (Datum.Depth 2160) >
               offset <- findIndex (any (\(s, _) -> s < slot)) events
               Ix.rewind offset index
 
--- | does the transaction contain a targetAddress
+addressDatumWorker
+    :: Maybe TargetAddresses  -- ^ Target addresses to filter for
+    -> Worker
+addressDatumWorker targetAddresses Coordinator{_barrier} ch path =
+    AddressDatum.open path (AddressDatum.Depth 2160) >>= innerLoop
+  where
+    innerLoop :: AddressDatumIndex -> IO ()
+    innerLoop index = do
+      signalQSemN _barrier 1
+      event <- atomically $ readTChan ch
+      case event of
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ -> do
+            -- TODO Redo. Inefficient filtering
+            let addressFilter = case targetAddresses of
+                    Just targetAddrs -> Just $ \addr ->  addr `elem` targetAddrs
+                    _                -> Nothing -- no filtering is applied
+                addressDatumIndexEvent =
+                    AddressDatum.toAddressDatumIndexEvent addressFilter txs slotNo
+            Storable.insert addressDatumIndexEvent index >>= innerLoop
+        RollBackward cp _ct -> do
+          let sn = case cp of
+                     C.ChainPoint sn' _    -> sn'
+                     C.ChainPointAtGenesis -> SlotNo 0
+          Storable.rewind sn index >>= innerLoop . fromMaybe index
+
+-- | Does the transaction contain a targetAddress
 isInTargetTxOut
     :: TargetAddresses              -- ^ non empty list of target address
     -> C.TxOut C.CtxTx era    -- ^  a cardano transaction out that contains an address
@@ -248,10 +271,16 @@ combinedIndexer
   :: Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> Maybe TargetAddresses
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIndexers remainingIndexers
+combinedIndexer
+    utxoPath
+    addressDatumPath
+    datumPath
+    scriptTxPath
+    maybeTargetAddresses = combineIndexers remainingIndexers
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
@@ -259,6 +288,7 @@ combinedIndexer utxoPath datumPath scriptTxPath maybeTargetAddresses = combineIn
     pairs =
         [
             (utxoWorker maybeTargetAddresses, utxoPath)
+            , (addressDatumWorker maybeTargetAddresses, addressDatumPath)
             , (datumWorker, datumPath)
             , (scriptTxWorker (\_ -> pure []), scriptTxPath)
         ]

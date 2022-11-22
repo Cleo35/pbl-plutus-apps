@@ -56,7 +56,6 @@ import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlF
 
 import Hedgehog.Extras qualified as H
 import Marconi.Index.New.ScriptTx qualified as NewScriptTx
-import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Indexers qualified as M
 import Marconi.Logging ()
 import RewindableIndex.Storable qualified as Storable

@@ -26,7 +26,14 @@ main = do
       (Cli.optionsSocketPath o)
       (Cli.optionsNetworkId o)
       (Cli.optionsChainPoint o)
-      (combinedIndexer (Cli.utxoDbPath o) (Cli.datumDbPath o) (Cli.scriptTxDbPath o) (Cli.optionsTargetAddresses o ) . logging trace)
+      (combinedIndexer
+        (Cli.utxoDbPath o)
+        (Cli.addressDatumDbPath o)
+        (Cli.datumDbPath o)
+        (Cli.scriptTxDbPath o)
+        (Cli.optionsTargetAddresses o)
+        . logging trace
+      )
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $

@@ -18,6 +18,7 @@ import Cardano.Api.Shelley qualified as Shelley
 import Gen.Cardano.Api.Typed qualified as CGen
 
 import Marconi.Index.ScriptTx qualified as ScriptTx
+import Spec.Marconi.Index.AddressDatum qualified as AddressDatumSpec
 
 import Integration qualified
 
@@ -26,8 +27,9 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Marconi"
-  [ testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
-  , Integration.tests
+  [ AddressDatumSpec.tests
+  -- , testPropertyNamed "prop_script_hashes_in_tx_match" "getTxBodyScriptsRoundtrip" getTxBodyScriptsRoundtrip
+  -- , Integration.tests
   ]
 
 -- | Create @nScripts@ scripts, add them to a transaction body, then
