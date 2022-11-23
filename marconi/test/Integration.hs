@@ -55,9 +55,11 @@ import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
 import Hedgehog.Extras qualified as H
+import Marconi.Index.New.ScriptTx qualified as NewScriptTx
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Indexers qualified as M
 import Marconi.Logging ()
+import RewindableIndex.Storable qualified as Storable
 
 tests :: TestTree
 tests = testGroup "Integration"
@@ -88,7 +90,7 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
   -- can write index updates to it and we can await for them (also
   -- making us not need threadDelay)
   indexedTxs <- liftIO IO.newChan
-  let writeScriptUpdate (ScriptTx.ScriptTxUpdate txScripts _slotNo) = case txScripts of
+  let writeScriptUpdate (NewScriptTx.ScriptTxEvent txScripts _slotNo) = case txScripts of
         (x : xs) -> IO.writeChan indexedTxs $ x :| xs
         _        -> pure ()
 
@@ -98,7 +100,7 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
 
     coordinator <- M.initialCoordinator 1
     ch <- IO.atomically . IO.dupTChan $ M._channel coordinator
-    (loop, indexer) <- M.scriptTxWorker_ (\_ update -> writeScriptUpdate update $> []) (ScriptTx.Depth 0) coordinator ch sqliteDb
+    (loop, indexer) <- M.scriptTxWorker_ (\update -> writeScriptUpdate update $> []) (NewScriptTx.Depth 0) coordinator ch sqliteDb
 
     -- Receive ChainSyncEvents and pass them on to indexer's channel
     void $ IO.forkIO $ do
@@ -302,9 +304,9 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
   -- sometimes the RollForward event contains a block with the first transaction 'tx1'
   -- which has no scripts. The test fails because of that in 'headM indexedScriptHashes'.
   -- For more details see https://github.com/input-output-hk/plutus-apps/issues/775
-  let (ScriptTx.TxCbor tx, indexedScriptHashes) = head $ (NE.filter (\(_, hashes) -> hashes /= [])) indexedWithScriptHashes
+  let (NewScriptTx.TxCbor tx, indexedScriptHashes) = head $ NE.filter (\(_, hashes) -> hashes /= []) indexedWithScriptHashes
 
-  ScriptTx.ScriptAddress indexedScriptHash <- headM indexedScriptHashes
+  NewScriptTx.ScriptTxAddress indexedScriptHash <- headM indexedScriptHashes
 
   indexedTx2 :: C.Tx C.AlonzoEra <- H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) tx
 
@@ -316,11 +318,11 @@ testIndex = H.integration . HE.runFinallies . workspace "chairman" $ \tempAbsBas
     let
       queryLoop n = do
         H.threadDelay 250_000 -- wait 250ms before querying
-        txCbors <- liftIO $ ScriptTx.query indexer (ScriptTx.ScriptAddress plutusScriptHash) []
+        NewScriptTx.ScriptTxResult txCbors <- liftIO $ Storable.query Storable.QEverything indexer (NewScriptTx.ScriptTxAddress plutusScriptHash)
         case txCbors of
           result : _ -> pure result
           _          -> queryLoop (n + 1)
-    ScriptTx.TxCbor txCbor <- queryLoop (0 :: Integer)
+    NewScriptTx.TxCbor txCbor <- queryLoop (0 :: Integer)
     H.leftFail $ C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra) txCbor
 
   tx2 === queriedTx2

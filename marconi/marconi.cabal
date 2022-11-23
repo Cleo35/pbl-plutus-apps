@@ -22,16 +22,21 @@ source-repository head
 common lang
   default-language:   Haskell2010
   default-extensions:
+    DeriveAnyClass
     DeriveFoldable
     DeriveFunctor
     DeriveGeneric
     DeriveLift
     DeriveTraversable
     ExplicitForAll
+    FlexibleInstances
     GeneralizedNewtypeDeriving
     ImportQualifiedPost
+    InstanceSigs
+    MultiParamTypeClasses
     ScopedTypeVariables
     StandaloneDeriving
+    TypeFamilies
 
   ghc-options:
     -Wall -Widentities -Wincomplete-record-updates
@@ -45,6 +50,7 @@ library
   exposed-modules:
     Marconi.CLI
     Marconi.Index.Datum
+    Marconi.Index.New.ScriptTx
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
     Marconi.Indexers
@@ -129,6 +135,7 @@ test-suite marconi-test
   build-depends:
     , cardano-streaming
     , marconi
+    , rewindable-index
 
   --------------------------
   -- Other IOG dependencies
