@@ -136,6 +136,8 @@ test-suite marconi-test
   main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
+    EpochStakepoolSize
+    Helpers
     Integration
     Spec.Utxo
 
@@ -164,6 +166,8 @@ test-suite marconi-test
   ------------------------
   build-depends:
     , base                  >=4.9 && <5
+    , aeson
+    , async
     , bytestring
     , containers
     , directory
@@ -183,5 +187,3 @@ test-suite marconi-test
     , tasty-hunit
     , temporary
     , text
-
--- , aeson
