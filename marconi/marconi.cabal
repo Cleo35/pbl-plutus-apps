@@ -50,6 +50,7 @@ library
   exposed-modules:
     Marconi.CLI
     Marconi.Index.Datum
+    Marconi.Index.EpochStakepoolSize
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
     Marconi.Indexers
@@ -83,11 +84,14 @@ library
     , async
     , base
     , bytestring
+    , cardano-crypto-class
     , containers
     , filepath
     , lens
     , mwc-random
     , optparse-applicative
+    , ouroboros-consensus-cardano
+    , ouroboros-consensus-shelley
     , parsec
     , prettyprinter
     , raw-strings-qq
@@ -97,6 +101,8 @@ library
     , streaming
     , text
     , time
+    , transformers
+    , vector-map
 
 executable marconi
   import:         lang
