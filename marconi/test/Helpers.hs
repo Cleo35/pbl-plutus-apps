@@ -16,11 +16,13 @@ import Streaming.Prelude qualified as S
 import System.Directory qualified as IO
 import System.Environment qualified as IO
 import System.FilePath ((</>))
+import System.IO qualified as IO
 import System.IO.Temp qualified as IO
 import System.Info qualified as IO
 
 import Hedgehog (MonadTest)
 import Hedgehog qualified as H
+import Hedgehog.Extras.Stock.CallStack qualified as H
 import Hedgehog.Extras.Stock.IO.Network.Sprocket qualified as IO
 import Hedgehog.Extras.Test qualified as HE
 import Hedgehog.Extras.Test.Base qualified as H
@@ -213,6 +215,12 @@ calculateFee pparams nInputs nOutputs nByronKeyWitnesses nShelleyKeyWitnesses ne
   nInputs nOutputs
   nByronKeyWitnesses nShelleyKeyWitnesses
 
+-- | This is a copy of the workspace from
+-- hedgehog-extras:Hedgehog.Extras.Test.Base, which for darwin sets
+-- the systemTemp folder to /tmp.
+--
+-- It creates a temporary folder with @prefixPath@, which is removed
+-- after the supplied function @f@ returns.
 workspace :: (MonadTest m, MonadIO m, GHC.HasCallStack) => FilePath -> (FilePath -> m ()) -> m ()
 workspace prefixPath f = GHC.withFrozenCallStack $ do
   systemTemp <- case IO.os of
@@ -223,6 +231,7 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
   ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
   H.annotate $ "Workspace: " <> ws
+  liftIO $ IO.writeFile (ws <> "/module") H.callerModuleName
   f ws
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
