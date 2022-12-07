@@ -16,7 +16,6 @@ import Data.Either (fromRight)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (TxOutRefNotFound), typedValidatorLookups,
                                                              unspentOutputs)
@@ -32,6 +31,7 @@ import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicate, mockWalletPaymentPubKeyHash, w1, w2, walletFundsChange, (.&&.))
 import Plutus.Script.Utils.Typed qualified as Typed
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))

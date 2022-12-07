@@ -47,10 +47,8 @@ import Test.Tasty.QuickCheck (testProperty)
 
 import Data.Default (Default (def))
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value)
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.Certification
@@ -58,6 +56,8 @@ import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.GameStateMachine as G hiding (Guess)
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator as Trace
 import PlutusTx.Coverage
 

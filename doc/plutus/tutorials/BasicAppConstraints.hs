@@ -18,7 +18,7 @@ module BasicAppConstraints where
 
 import BasicApps (Split, SplitData (SplitData, amount, recipient1, recipient2), SplitSchema, mkSplitData)
 import Ledger (Ada, PaymentPubKeyHash, ScriptContext, TxOutRef, pNetworkId)
-import Ledger.Ada qualified as Ada
+import Plutus.Script.Utils.Ada qualified as Ada
 import Ledger.Constraints (MkTxError, TxConstraints, UnbalancedTx)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.OnChain.V1 qualified as Constraints

@@ -17,7 +17,6 @@ import Data.Maybe (fromMaybe)
 import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
-import Ledger.Ada qualified as Ada
 import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Generators (TxInputWitnessed (TxInputWitnessed))
@@ -27,6 +26,7 @@ import Ledger.Params (Params (pSlotConfig))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (EmulatorTx), Tx, TxInType (ConsumePublicKeyAddress), txOutAddress, txOutValue)
 import Ledger.Validation qualified as Validation
+import Plutus.Script.Utils.Ada qualified as Ada
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada

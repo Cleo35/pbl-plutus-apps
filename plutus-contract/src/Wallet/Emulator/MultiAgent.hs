@@ -37,15 +37,15 @@ import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Data.Foldable (fold)
 import Ledger hiding (to, value)
-import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (toCardanoTxOut)
 import Ledger.Validation qualified as Validation
-import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Contract.Error (AssertionError (GenericAssertion))
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
 import Plutus.V2.Ledger.Tx qualified as V2

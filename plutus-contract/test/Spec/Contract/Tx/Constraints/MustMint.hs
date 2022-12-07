@@ -17,7 +17,6 @@ import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as TC
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError (ScriptHashNotFound), ScriptLookups,
                                                              mintingPolicy, typedValidatorLookups, unspentOutputs)
@@ -29,16 +28,17 @@ import Ledger.Test (asRedeemer, coinMintingPolicy, coinMintingPolicyCurrencySymb
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (TokenName (TokenName))
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions,
                              emulatorConfig, w1, walletFundsAssetClassChange, (.&&.))
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
+import Plutus.Script.Utils.Value (TokenName (TokenName))
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Address, MintingPolicyHash (MintingPolicyHash), Redeemer, TxOutRef)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))

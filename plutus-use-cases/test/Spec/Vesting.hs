@@ -23,14 +23,14 @@ import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Slot
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.Vesting
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value
 import Plutus.Trace.Emulator (EmulatorTrace, callEndpoint)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx qualified

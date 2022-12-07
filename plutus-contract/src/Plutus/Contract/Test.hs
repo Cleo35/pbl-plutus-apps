@@ -112,7 +112,6 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
-import Ledger.Ada qualified as Ada
 import Ledger.Address (toPlutusAddress)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Plutus.Contract.Effects qualified as Requests
@@ -120,6 +119,7 @@ import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Resumable (Request (..), Response (..))
 import Plutus.Contract.Resumable qualified as State
 import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
+import Plutus.Script.Utils.Ada qualified as Ada
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Prelude qualified as P
 
@@ -129,7 +129,7 @@ import Ledger.Generators (GeneratorModel, Mockchain (..))
 import Ledger.Generators qualified as Gen
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
-import Ledger.Value (AssetClass, Value, assetClassValueOf)
+import Plutus.Script.Utils.Value (AssetClass, Value, assetClassValueOf)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef

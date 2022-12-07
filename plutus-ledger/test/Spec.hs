@@ -20,7 +20,6 @@ import Hedgehog.Range qualified as Range
 import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBound (LowerBound), Slot (Slot),
                UpperBound (UpperBound), fromMilliSeconds, interval)
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Bytes as Bytes
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
@@ -29,7 +28,8 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)

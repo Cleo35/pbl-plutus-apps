@@ -26,7 +26,6 @@ import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (getCardanoTxId, txOutDatumHash)
 import Plutus.Contract as Con
@@ -38,6 +37,7 @@ import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, a
                              waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V1.Address (mkValidatorCardanoAddress)
 import Plutus.Trace qualified as Trace

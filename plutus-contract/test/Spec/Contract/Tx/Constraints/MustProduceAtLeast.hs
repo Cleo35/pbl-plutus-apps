@@ -14,7 +14,6 @@ import Test.Tasty (TestTree, testGroup)
 
 import Data.Text qualified as Text
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Constraints.OffChain qualified as Constraints (MkTxError, typedValidatorLookups, unspentOutputs)
 import Ledger.Constraints.OnChain.V1 qualified as Constraints (checkScriptContext)
@@ -28,6 +27,7 @@ import Plutus.Contract as Con (Contract, ContractError (WalletContractError), Em
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
                              w1, w6, (.&&.))
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, setSigningProcess,
                                                  walletInstanceTag)
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)

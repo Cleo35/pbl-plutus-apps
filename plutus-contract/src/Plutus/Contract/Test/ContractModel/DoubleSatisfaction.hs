@@ -46,7 +46,6 @@ import Data.Maybe
 import Data.Either.Combinators (leftToMaybe)
 
 import Ledger qualified as P
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto
 import Ledger.Generators
@@ -59,6 +58,7 @@ import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut
 import Ledger.Validation qualified as Validation
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
 import Streaming qualified as S

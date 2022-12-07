@@ -6,13 +6,13 @@
 module Spec.MultiSig(tests, failingTrace, succeedingTrace) where
 
 import Control.Monad (void)
-import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index (ValidationError (ScriptFailure))
 import Ledger.Scripts (ScriptError (EvaluationError))
 import Plutus.Contract (Contract, ContractError)
 import Plutus.Contract.Test
 import Plutus.Contracts.MultiSig as MS
+import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx qualified

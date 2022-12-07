@@ -14,10 +14,10 @@ module Spec.MultiSigStateMachine(tests, lockProposeSignPay) where
 import Data.Foldable (traverse_)
 
 import Ledger qualified
-import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.Ada qualified as Ada
 import Wallet.Emulator qualified as EM
 
 import Plutus.Contract.Test

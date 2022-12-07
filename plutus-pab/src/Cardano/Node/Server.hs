@@ -26,12 +26,12 @@ import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Units (Millisecond, Second)
-import Ledger.Ada qualified as Ada
 import Ledger.Params (Params (..))
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Plutus.Script.Utils.Ada qualified as Ada
 import Servant (Application, hoistServer, serve, (:<|>) ((:<|>)))
 import Servant.Client (BaseUrl (baseUrlPort))
 import Wallet.Emulator.Wallet (fromWalletNumber)

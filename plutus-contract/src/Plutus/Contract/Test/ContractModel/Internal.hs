@@ -211,17 +211,17 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 
-import Ledger.Ada qualified as Ada
 import Ledger.Index as Index
 import Ledger.Params ()
 import Ledger.Scripts
 import Ledger.Slot
-import Ledger.Value (AssetClass)
 import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
 import Plutus.Contract.Schema (Input)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Symbolics
 import Plutus.Contract.Test.Coverage
+import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Value (AssetClass)
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, freezeContractInstance,
                                        runEmulatorStream, waitNSlots, walletInstanceTag)
@@ -1168,7 +1168,7 @@ withDLTest dl prop test = DL.withDLTest dl (prop . fromStateModelActions) (toDLT
 --   `anyActions_`
 --   `action` $ Wait endSlot
 --   `action` $ Collect
---   `assertModel` "Funds are locked!" (`Ledger.Value.isZero` . `lockedValue`)
+--   `assertModel` "Funds are locked!" (`Plutus.Script.Utils.Value.isZero` . `lockedValue`)
 -- @
 --
 -- `DL` scenarios are turned into QuickCheck properties using `forAllDL`.

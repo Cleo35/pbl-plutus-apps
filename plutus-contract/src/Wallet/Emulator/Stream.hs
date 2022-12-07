@@ -48,8 +48,8 @@ import Ledger.Blockchain (Block, OnChainTx (Valid))
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Slot (Slot)
 import Ledger.Tx (CardanoTx (CardanoApiTx), onCardanoTx)
-import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexError)
+import Plutus.Script.Utils.Value (Value)
 import Streaming (Stream)
 import Streaming qualified as S
 import Streaming.Prelude (Of)

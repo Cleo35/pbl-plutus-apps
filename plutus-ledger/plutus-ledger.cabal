@@ -57,7 +57,6 @@ library
     Data.Aeson.Extras
     Data.Time.Units.Extra
     Ledger
-    Ledger.Ada
     Ledger.Address
     Ledger.Address.Orphans
     Ledger.AddressMap
@@ -94,7 +93,6 @@ library
     Ledger.Typed.Tx
     Ledger.Typed.TypeUtils
     Ledger.Validation
-    Ledger.Value
     Ledger.Value.Orphans
     Prettyprinter.Extras
 

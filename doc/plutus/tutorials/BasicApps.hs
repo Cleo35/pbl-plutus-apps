@@ -22,11 +22,11 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Ledger (Ada, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
                pNetworkId, valuePaidTo)
-import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Endpoint, Promise, endpoint, getParams, logInfo, selectList, submitTxConstraints,
                         submitTxConstraintsSpending, type (.\/), utxosAt)
+import Plutus.Script.Utils.Ada qualified as Ada
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool, Semigroup ((<>)), ($), (&&), (-), (.), (<$>), (>=))
 import Prelude qualified as Haskell
