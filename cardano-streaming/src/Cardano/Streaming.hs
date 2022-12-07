@@ -218,6 +218,13 @@ applyBlockThrow env ledgerState validationMode block = case C.applyBlock env led
   Left err -> IO.throw err
   Right ls -> pure ls
 
+-- * Copy-paste code
+--
+-- The following is pasted in from cardano-api:Cardano.Api.LedgerState.
+-- (`getLastLedgerState` and `singletonLedgerStateHistory` aren't a
+-- direct copy-paste, but they are extracted from within `foldBlocks`)
+
+
 -- | A history of k (security parameter) recent ledger states. The head is the
 -- most recent item. Elements are:
 --
@@ -228,8 +235,7 @@ applyBlockThrow env ledgerState validationMode block = case C.applyBlock env led
 type LedgerStateHistory = History LedgerStateEvents
 type History a = Seq (C.SlotNo, a, WithOrigin (C.BlockInMode C.CardanoMode))
 
-singletonLedgerStateHistory :: C.LedgerState -> LedgerStateHistory
-singletonLedgerStateHistory ledgerState = Seq.singleton (0, (ledgerState, []), Origin)
+type LedgerStateEvents = (C.LedgerState, [C.LedgerEvent])
 
 -- | Add a new ledger state to the history
 pushLedgerState
@@ -259,4 +265,5 @@ getLastLedgerState ledgerStates' = maybe
   (\(_,(ledgerState, _),_) -> ledgerState)
   (Seq.lookup 0 ledgerStates')
 
-type LedgerStateEvents = (C.LedgerState, [C.LedgerEvent])
+singletonLedgerStateHistory :: C.LedgerState -> LedgerStateHistory
+singletonLedgerStateHistory ledgerState = Seq.singleton (0, (ledgerState, []), Origin)
