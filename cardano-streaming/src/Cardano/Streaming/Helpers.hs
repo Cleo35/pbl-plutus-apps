@@ -4,11 +4,10 @@
 {-# LANGUAGE MultiWayIf #-}
 module Cardano.Streaming.Helpers where
 
-import Control.Monad.Primitive (PrimState)
-import Control.Monad.Trans.Class (lift)
-import Data.Vector qualified as V
-import Data.Vector.Generic qualified as VG
-import Data.Vector.Generic.Mutable qualified as VGM
+import Control.Concurrent.Async qualified as IO
+import Control.Exception qualified as IO
+import Data.SOP.Strict (NP ((:*)))
+import GHC.Generics (Generic)
 import Streaming.Prelude qualified as S
 
 import Cardano.Api qualified as C
@@ -17,10 +16,6 @@ import Cardano.Chain.Genesis qualified
 import Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (RequiresMagic, RequiresNoMagic))
 import Cardano.Ledger.Shelley.LedgerState qualified as SL
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
-import Control.Concurrent.Async qualified as IO
-import Control.Exception qualified as IO
-import Data.SOP.Strict (NP ((:*)))
-import GHC.Generics (Generic)
 import Ouroboros.Consensus.Cardano.Block qualified as O
 import Ouroboros.Consensus.Cardano.CanHardFork qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
