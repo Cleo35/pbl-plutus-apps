@@ -35,8 +35,7 @@ import Test.Runtime qualified as TN
 import Testnet.Cardano qualified as TN
 import Testnet.Conf qualified as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
 
--- * Start testnet
-
+-- | Start a testnet.
 startTestnet
   :: TN.TestnetOptions
   -> FilePath
@@ -82,15 +81,12 @@ getPoolSocketPathAbs conf tn = do
   socketPathAbs <- H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
   pure socketPathAbs
 
---
-
 readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
 readAs as path = do
   path' <- H.note path
   H.leftFailM . liftIO $ C.readFileTextEnvelope as path'
 
--- * Talk to node
-
+-- | An empty transaction
 emptyTxBodyContent :: C.Lovelace -> C.ProtocolParameters -> C.TxBodyContent C.BuildTx C.AlonzoEra
 emptyTxBodyContent fee pparams = C.TxBodyContent
   { C.txIns              = []
@@ -128,7 +124,7 @@ findUTxOByAddress localNodeConnectInfo address = let
   H.leftFailM . H.leftFailM . liftIO $ C.queryNodeLocalState localNodeConnectInfo Nothing $
     C.QueryInEra C.AlonzoEraInCardanoMode query
 
--- | Get txIns and values for address
+-- | Get [TxIn] and total value for an address.
 getAddressTxInsValue
   :: (MonadIO m, MonadTest m)
   => C.LocalNodeConnectInfo C.CardanoMode -> C.Address a -> m ([C.TxIn], C.Lovelace)
@@ -150,6 +146,7 @@ submitTx localNodeConnectInfo tx = do
       SubmitFail reason -> H.failMessage GHC.callStack $ "Transaction failed: " <> show reason
       SubmitSuccess     -> pure ()
 
+-- | Block until a transaction with @txId@ is sent over the local chainsync protocol.
 awaitTxId :: C.LocalNodeConnectInfo C.CardanoMode -> C.TxId -> IO ()
 awaitTxId con txId = do
   chan :: IO.Chan [C.TxId] <- IO.newChan
@@ -163,6 +160,7 @@ awaitTxId con txId = do
         when (not $ txId `elem` txIds) loop
   loop
 
+-- | Submit the argument transaction and await for it to be accepted into the blockhain.
 submitAwaitTx
   :: (MonadIO m, MonadTest m)
   => C.LocalNodeConnectInfo C.CardanoMode -> (C.Tx C.AlonzoEra, C.TxBody C.AlonzoEra) -> m ()
@@ -236,7 +234,7 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
     H.evalIO $ IO.removeDirectoryRecursive ws
 
--- * Pickers
+-- * Accessors
 
 bimTxIds :: C.BlockInMode mode -> [C.TxId]
 bimTxIds (C.BlockInMode block _) = blockTxIds block
