@@ -53,12 +53,11 @@ import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
 import Ledger.Tx hiding (mint)
-import Ledger.Tx.CardanoAPI (adaToCardanoValue, fromCardanoTxOutToPV1TxInfoTxOut, toCardanoAddressInEra,
-                             toCardanoTxOutDatumInTx, toCardanoTxOutDatumInline)
+import Ledger.Tx.CardanoAPI (fromCardanoTxOutToPV1TxInfoTxOut, toCardanoAddressInEra, toCardanoTxOutDatumInTx,
+                             toCardanoTxOutDatumInline)
 import Ledger.Validation qualified as Validation
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
-import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
 import Streaming qualified as S
@@ -196,7 +195,7 @@ getDSCounterexamples params = go 0 mempty
       SlotAdd slot' -> go slot' idx es
       TxnValidate _ txn _ ->
           let
-              cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
+              cUtxoIndex = toCardanoUtxoIndex idx
               e' = Validation.validateCardanoTx params slot cUtxoIndex txn
               idx' = case e' of
                   Left (Index.Phase1, _) -> idx
@@ -227,7 +226,7 @@ doubleSatisfactionCandidates params slot idx event = case event of
 validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
 validateWrappedTx' WrappedTx{..} =
   let
-    cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex _dsUtxoIndex
+    cUtxoIndex = toCardanoUtxoIndex _dsUtxoIndex
     signedTx = Validation.fromPlutusTxSigned _dsParams cUtxoIndex _dsTx CW.knownPaymentKeys
     e' = Validation.validateCardanoTx _dsParams _dsSlot cUtxoIndex signedTx
   in leftToMaybe e'
@@ -353,7 +352,7 @@ doubleSatisfactionCounterexamples dsc = do
        -- emulator yet
        newFakeTxScriptOut = TxOut $ C.TxOut
                                   scriptCardanoAddress
-                                  (C.TxOutValue C.MultiAssetInBabbageEra $ adaToCardanoValue $ Ada.fromValue $ txOutValue out)
+                                  (C.TxOutValue C.MultiAssetInBabbageEra $ txOutValue out)
                                   (toCardanoTxOutDatumInline datumEmpty)
                                   C.ReferenceScriptNone
        newFakeTxOutRef = TxOutRef { txOutRefId  = TxId "very sha 256 hash I promise"

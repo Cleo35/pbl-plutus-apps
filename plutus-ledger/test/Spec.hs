@@ -6,6 +6,7 @@
 module Main(main) where
 
 import Cardano.Api qualified as Api
+import Cardano.Api qualified as C
 import Cardano.Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
@@ -28,8 +29,9 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
+import Ledger.Value.CardanoAPI qualified as C
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value qualified as Value
+import Plutus.Script.Utils.Value qualified as Value hiding (scale)
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -67,9 +69,9 @@ tests = testGroup "all tests" [
     testGroup "Value" ([
         testPropertyNamed "Value ToJSON/FromJSON" "value_json_roundtrip" (jsonRoundTrip Gen.genValue),
         testPropertyNamed "CurrencySymbol ToJSON/FromJSON" "currency_symbol_json_roundtrip" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
-        testPropertyNamed "TokenName ToJSON/FromJSON" "tokenname_json_roundtrip" (jsonRoundTrip Gen.genTokenName),
         testPropertyNamed "TokenName looks like escaped bytestring ToJSON/FromJSON" "tokenname_escaped_roundtrip" (jsonRoundTrip . pure $ ("\NUL0xc0ffee" :: Value.TokenName)),
-        testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow
+        testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow,
+        testPropertyNamed "Old split equals the new split" "valueSplit" valueSplit
         ] ++ (let   vlJson :: BSL.ByteString
                     vlJson = "{\"getValue\":[[{\"unCurrencySymbol\":\"ab01ff\"},[[{\"unTokenName\":\"myToken\"},50]]]]}"
                     vlValue = Value.singleton "ab01ff" "myToken" 50
@@ -128,28 +130,35 @@ splitValMinAda = property $ do
 valueAddIdentity :: Property
 valueAddIdentity = property $ do
     vl1 <- forAll Gen.genValue
-    Hedgehog.assert $ vl1 == (vl1 PlutusTx.+ PlutusTx.zero)
-    Hedgehog.assert $ vl1 == (PlutusTx.zero PlutusTx.+ vl1)
+    Hedgehog.assert $ vl1 == vl1 <> mempty
+    Hedgehog.assert $ vl1 == mempty <> vl1
 
 valueAddInverse :: Property
 valueAddInverse = property $ do
     vl1 <- forAll Gen.genValue
-    let vl1' = PlutusTx.negate vl1
-    Hedgehog.assert $ PlutusTx.zero == (vl1 PlutusTx.+ vl1')
+    let vl1' = C.negateValue vl1
+    Hedgehog.assert $ mempty == (vl1 <> vl1')
 
 valueScalarIdentity :: Property
 valueScalarIdentity = property $ do
     vl1 <- forAll Gen.genValue
-    Hedgehog.assert $ vl1 == PlutusTx.scale 1 vl1
+    Hedgehog.assert $ vl1 == C.scale 1 vl1
 
 valueScalarDistrib :: Property
 valueScalarDistrib = property $ do
     vl1 <- forAll Gen.genValue
     vl2 <- forAll Gen.genValue
     scalar <- forAll (Gen.integral (fromIntegral <$> Range.linearBounded @Int))
-    let r1 = PlutusTx.scale scalar (vl1 PlutusTx.+ vl2)
-        r2 = PlutusTx.scale scalar vl1 PlutusTx.+ PlutusTx.scale scalar vl2
+    let r1 = C.scale scalar (vl1 <> vl2)
+        r2 = C.scale scalar vl1 <> C.scale scalar vl2
     Hedgehog.assert $ r1 == r2
+
+valueSplit :: Property
+valueSplit = property $ do
+    vl <- forAll Gen.genValue
+    let (pvl1, pvl2) = Value.split (C.fromCardanoValue vl)
+        (vl1, vl2) = C.split vl
+    Hedgehog.assert $ (pvl1, pvl2) == (C.fromCardanoValue vl1, C.fromCardanoValue vl2)
 
 intvlMember :: Property
 intvlMember = property $ do

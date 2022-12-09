@@ -41,6 +41,7 @@ import Ledger qualified
 import Ledger.Slot (Slot (..))
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract hiding (currentSlot, runError)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
@@ -49,7 +50,6 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator (ContractHandle (..), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx qualified
-import PlutusTx.Prelude qualified as PlutusTx
 import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream (filterLogLevel, foldEmulatorStreamM)
@@ -80,16 +80,16 @@ tests = testGroup "crowdfunding"
             void (Trace.activateContractWallet w1 $ theContract $ TimeSlot.scSlotZeroTime slotCfg)
 
     , checkPredicate "make contribution"
-        (walletFundsChange w1 (Ada.adaValueOf (-10)))
+        (walletFundsChange w1 (Value.adaValueOf (-10)))
         $ let contribution = Ada.adaValueOf 10
           in makeContribution w1 contribution >> void Trace.nextSlot
 
     , checkPredicate "make contributions and collect"
-        (walletFundsChange w1 (Ada.adaValueOf 22.5))
+        (walletFundsChange w1 (Value.adaValueOf 22.5))
         successfulCampaign
 
     , checkPredicate "cannot make contribution after campaign dealine"
-        (walletFundsChange w1 PlutusTx.zero
+        (walletFundsChange w1 mempty
         .&&. assertFailedTransaction (\_ err ->
             case err of
                 Ledger.CardanoLedgerValidationError msg ->
@@ -101,7 +101,7 @@ tests = testGroup "crowdfunding"
             makeContribution w1 (Ada.adaValueOf 10)
 
     , checkPredicate "cannot collect money too late"
-        (walletFundsChange w1 PlutusTx.zero
+        (walletFundsChange w1 mempty
         .&&. assertFailedTransaction (\_ err ->
             case err of
                 Ledger.CardanoLedgerValidationError msg ->
@@ -122,7 +122,7 @@ tests = testGroup "crowdfunding"
             Trace.thawContractInstance chInstanceId
 
     , checkPredicate "cannot collect unless notified"
-        (walletFundsChange w1 PlutusTx.zero)
+        (walletFundsChange w1 mempty)
         $ do
             ContractHandle{chInstanceId} <- startCampaign
             makeContribution w2 (Ada.adaValueOf 10)

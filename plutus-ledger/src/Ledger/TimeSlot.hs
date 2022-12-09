@@ -25,7 +25,6 @@ module Ledger.TimeSlot(
 ) where
 
 import Codec.Serialise (Serialise)
-import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.OpenApi qualified as OpenApi
@@ -51,7 +50,7 @@ data SlotConfig =
         , scSlotZeroTime :: POSIXTime -- ^ Beginning of slot 0 (in milliseconds)
         }
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData, OpenApi.ToSchema)
+    deriving anyclass (ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makeLift ''SlotConfig
 

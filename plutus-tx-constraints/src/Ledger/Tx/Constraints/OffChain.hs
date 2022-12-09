@@ -80,7 +80,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), toCardanoMintWitness, toCardanoPolicyId)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (ValidatorTypes (DatumType, RedeemerType))
-import Ledger.Value qualified as Value
+import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx (FromData, ToData)
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), MeetSemiLattice ((/\)))
 import Prettyprinter (Pretty (pretty), colon, (<+>))
@@ -359,7 +359,7 @@ processConstraint = \case
         refScript <- lookupScriptAsReferenceScript refScriptHashM
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddressInEra networkId addr
-            <*> C.toCardanoTxOutValue vl
+            <*> fmap C.toCardanoTxOutValue (C.toCardanoValue vl)
             <*> pure (toTxOutDatum md)
             <*> pure refScript
         unbalancedTx . tx . txOuts <>= [ out ]

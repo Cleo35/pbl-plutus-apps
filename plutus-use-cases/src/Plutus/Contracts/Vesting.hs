@@ -33,11 +33,11 @@ import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), pNetworkId, testnet)
+import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash),
+               decoratedTxOutPlutusValue, pNetworkId, testnet)
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScriptWithDatumInTx, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
-import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
@@ -205,7 +205,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
     now <- fst <$> currentNodeClientTimeRange
     unspentOutputs <- utxosAt addr
     let
-        currentlyLocked = foldMap (view Tx.decoratedTxOutValue) (Map.elems unspentOutputs)
+        currentlyLocked = foldMap decoratedTxOutPlutusValue (Map.elems unspentOutputs)
         remainingValue = currentlyLocked - payment
         mustRemainLocked = totalAmount vesting - availableAt vesting now
         maxPayment = currentlyLocked - mustRemainLocked

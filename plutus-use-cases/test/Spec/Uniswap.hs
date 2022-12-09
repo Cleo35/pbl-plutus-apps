@@ -10,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE ViewPatterns        #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing -fno-warn-redundant-constraints #-}
 module Spec.Uniswap where
 
@@ -32,6 +33,7 @@ import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Coverage
 
 import Ledger qualified as Ledger
+import Ledger.Value.CardanoAPI (AssetId (AssetId), fromCardanoAssetId, toCardanoAssetId)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value qualified as Value
 
@@ -201,8 +203,8 @@ instance ContractModel UniswapModel where
   instanceContract tokenSem key token = case key of
     OwnerKey    -> ownerEndpoint
     SetupKey    -> setupTokens
-    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem  $ token
-    BadReqKey _ -> toContract . badEndpoints  . Uniswap . Coin . tokenSem  $ token
+    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . fromCardanoAssetId . tokenSem  $ token
+    BadReqKey _ -> toContract . badEndpoints  . Uniswap . Coin . fromCardanoAssetId . tokenSem  $ token
 
   initialState = UniswapModel Nothing mempty mempty mempty
 
@@ -480,28 +482,32 @@ instance ContractModel UniswapModel where
     BadRemoveLiquidity w t1 _ t2 _ a ->
       nextState $ RemoveLiquidity w t1 t2 a      -- because the precondition ensures the amounts are valid
 
-  perform h tokenSem s act = case act of
+  perform h tokenSem' s act = let tokenSem = fromCardanoAssetId . tokenSem' in case act of
     SetupTokens -> do
       delay 40
       Trace.observableState (h SetupKey) >>= \case
-        Just (Semigroup.Last cur) -> sequence_ [ registerToken tn (Value.assetClass (Currency.currencySymbol cur) $ fromString tn) | tn <- ["A", "B", "C", "D"]]
+        Just (Semigroup.Last cur) -> sequence_ [ registerToken tn (AssetId (Currency.currencyPolicyId cur) $ fromString tn) | tn <- ["A", "B", "C", "D"]]
         _                         -> Trace.throwError $ GenericError "failed to create currency"
 
     Start -> do
       delay 5
       Trace.observableState (h OwnerKey) >>= \case
-        Last (Just (Right (Uniswap (Coin v)))) -> registerToken "Uniswap" v
-        _                                      -> Trace.throwError $ GenericError "initialisation failed"
+        Last (Just (Right (Uniswap (Coin (toCardanoAssetId -> Right v))))) -> registerToken "Uniswap" v
+        _                                                                  -> Trace.throwError $ GenericError "initialisation failed"
 
     CreatePool w t1 a1 t2 a2 -> do
       let us = s ^. contractState . uniswapToken . to fromJust
           c1 = Coin (tokenSem t1)
           c2 = Coin (tokenSem t2)
           Coin ac = liquidityCoin (fst . Value.unAssetClass . tokenSem $ us) c1 c2
+          assetId = toCardanoAssetId ac
       Trace.callEndpoint @"create" (h (WalletKey w)) $ CreateParams c1 c2 (Amount a1) (Amount a2)
       delay 5
-      when (not $ hasPool s t1 t2) $ do
-        registerToken "Liquidity" ac
+      case assetId of
+        Right aid ->
+          unless (hasPool s t1 t2) $ do
+            registerToken "Liquidity" aid
+        _ -> Trace.throwError $ GenericError "assetId conversion failed"
 
     AddLiquidity w t1 a1 t2 a2 -> do
       let c1 = Coin (tokenSem t1)
@@ -534,7 +540,7 @@ instance ContractModel UniswapModel where
       delay 5
 
     Bad act -> do
-      perform h tokenSem s act
+      perform h tokenSem' s act
 
   shrinkAction s a = case a of
     CreatePool w t1 a1 t2 a2           -> [ CreatePool w t1 a1' t2 a2'   | (a1', a2') <- shrink (a1, a2), a1' >= 0, a2' >= 0 ]

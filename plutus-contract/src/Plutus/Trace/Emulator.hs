@@ -124,9 +124,10 @@ import Plutus.Trace.Emulator.Types qualified
 import Streaming (Stream)
 import Streaming.Prelude (Of ((:>)))
 
+import Cardano.Api qualified as C
+import Data.Text qualified as T
 import Ledger.Params (Params (..))
 import Ledger.Slot (getSlot)
-import Plutus.V1.Ledger.Value (Value, flattenValue)
 
 -- | A very simple effect for interpreting the output printing done by the
 -- trace printing functions:
@@ -323,10 +324,8 @@ pad :: Int -> Integer -> String
 pad n = (\x -> replicate (n - length x) '0' ++ x) . show
 
 printBalances :: forall effs. Member PrintEffect effs
-              => Map.Map Entity Value
+              => Map.Map Entity C.Value
               -> Eff effs ()
 printBalances m = do
     forM_ (Map.toList m) $ \(e, v) -> do
-        printLn $ show e <> ": "
-        forM_ (flattenValue v) $ \(cs, tn, a) ->
-            printLn $ "    {" <> show cs <> ", " <> show tn <> "}: " <> show a
+        printLn $ show e <> ": " <> T.unpack (C.renderValuePretty v)

@@ -21,8 +21,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertContractError, assertFailedTransaction, assertValidatedTransactionCount,
                              checkPredicateOptions, defaultCheckOptions, w1, (.&&.))
-import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError))

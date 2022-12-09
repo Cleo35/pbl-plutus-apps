@@ -19,26 +19,30 @@ import Data.Default (Default (def))
 import Ledger (Slot (..), Value)
 import Ledger qualified
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.SealedBidAuction
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Trace.Emulator qualified as Trace
 
+import Ledger.Generators (someTokenValue)
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 
 -- | The token that we are auctioning off.
+theTokenC :: Value.Value
+theTokenC = someTokenValue "token" 1
+
 theToken :: Value
-theToken = someTokenValue "token" 1
+theToken = Value.fromCardanoValue theTokenC
 
 -- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
 options = defaultCheckOptionsContractModel
-    & changeInitialWalletValue w1 ((<>) theToken)
+    & changeInitialWalletValue w1 ((<>) theTokenC)
 
 -- * QuickCheck model
 

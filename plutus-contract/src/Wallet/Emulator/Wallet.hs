@@ -24,6 +24,7 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api (makeSignedTransaction)
+import Cardano.Api qualified as C
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, view)
 import Control.Monad (foldM, (<=<))
@@ -47,6 +48,7 @@ import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
+import Debug.Trace
 import GHC.Generics (Generic)
 import Ledger (CardanoTx, DecoratedTxOut, Params (..), PubKeyHash, TxOutRef, UtxoIndex (..), Value)
 import Ledger qualified
@@ -59,6 +61,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee qualified as Fee
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (fromCardanoValue)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Validation (getRequiredSigners)
 import Plutus.ChainIndex (PageQuery)
@@ -265,8 +268,10 @@ handleWallet = \case
         => UnbalancedTx
         -> Eff effs (Either WalletAPIError CardanoTx)
     balanceTxH utx = runError $ do
+        traceShowM utx
         logInfo $ BalancingUnbalancedTx utx
         txCTx <- handleBalance utx
+        traceShowM txCTx
         logInfo $ FinishedBalancing txCTx
         pure txCTx
 
@@ -281,7 +286,7 @@ handleWallet = \case
         handleAddSignature txCTx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
-    totalFundsH = foldMap (view Ledger.decoratedTxOutValue) <$> (get >>= ownOutputs)
+    totalFundsH = fromCardanoValue . foldMap (view Ledger.decoratedTxOutValue) <$> (get >>= ownOutputs)
 
     yieldUnbalancedTxH ::
         ( Member (Error WalletAPIError) effs
@@ -466,7 +471,7 @@ walletPaymentPubKeyHashes = foldl' f Map.empty . Map.toList
 
 -- | For a set of wallets, convert them into a map of value: entity,
 -- where entity is one of 'Entity'.
-balances :: ChainState -> WalletSet -> Map.Map Entity Value
+balances :: ChainState -> WalletSet -> Map.Map Entity C.Value
 balances state wallets = foldl' f Map.empty . getIndex . _index $ state
   where
     toEntity :: CardanoAddress -> Entity

@@ -131,7 +131,6 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
                              ValidatorTypes (DatumType, RedeemerType), validatorAddress)
-import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts qualified as P
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator (getValidator), Value,
@@ -548,7 +547,7 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
-adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
+adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([C.Lovelace], UnbalancedTx)
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) (adjustTxOut params)
 
 
@@ -701,7 +700,7 @@ processConstraint = \case
                        pure $ txout ^. Tx.decoratedTxOutValue
         -- TODO: Add the optional datum in the witness set for the pub key output
         unbalancedTx . tx . Tx.inputs %= (Tx.pubKeyTxInput txo :)
-        valueSpentInputs <>= provided value
+        valueSpentInputs <>= provided (C.fromCardanoValue value)
 
     MustSpendScriptOutput txo red mref -> do
         txout <- lookupTxOutRef txo
@@ -739,7 +738,8 @@ processConstraint = \case
             else valueSpentOutputs <>= provided (value i)
 
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash (red, flip Versioned PlutusV2 <$> mref)
-        unbalancedTx . tx . Tx.mint <>= value i
+        minted <- throwToCardanoError $ C.toCardanoValue $ value i
+        unbalancedTx . tx . Tx.mint <>= minted
 
         case mref of
             Just ref -> do
@@ -850,7 +850,7 @@ resolveScriptTxOutDatumAndValue
         Tx.DatumUnknown      -> DatumInTx <$> lookupDatum dh
         Tx.DatumInBody datum -> pure (DatumInTx datum)
         Tx.DatumInline datum -> pure (DatumInline datum)
-    pure $ Just (datum, _decoratedTxOutValue)
+    pure $ Just (datum, C.fromCardanoValue _decoratedTxOutValue)
 resolveScriptTxOutDatumAndValue _ = pure Nothing
 
 throwToCardanoError :: MonadError MkTxError m => Either C.ToCardanoError a -> m a
@@ -871,7 +871,7 @@ mkCardanoTxOut addr value mTxOutDatum refScript = do
   let cardanoTxOut =
           fmap TxOut $
               C.TxOut <$> C.toCardanoAddressInEra networkId addr
-                      <*> C.toCardanoTxOutValue value
+                      <*> fmap C.toCardanoTxOutValue (C.toCardanoValue value)
                       <*> pure (toTxOutDatum mTxOutDatum)
                       <*> pure refScript
 

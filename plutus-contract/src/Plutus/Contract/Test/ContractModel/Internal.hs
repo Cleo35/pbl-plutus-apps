@@ -186,8 +186,6 @@ import Plutus.Trace.Emulator (initialChainState, waitUntilSlot)
 import Plutus.Trace.Emulator.Types (ContractHandle (..), ContractInstanceMsg (..), ContractInstanceTag,
                                     EmulatorRuntimeError (..), UserThreadMsg (..), cilMessage)
 
-import PlutusTx.Prelude qualified as P
-
 import Control.Foldl qualified as L
 import Control.Lens
 import Control.Monad.Cont
@@ -220,8 +218,6 @@ import Plutus.Contract.Schema (Input)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Symbolics
 import Plutus.Contract.Test.Coverage
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value (AssetClass)
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, freezeContractInstance,
                                        runEmulatorStream, waitNSlots, walletInstanceTag)
@@ -254,6 +250,7 @@ import Data.Void
 import Plutus.Contract.Types (IsContract (..))
 import Prettyprinter
 
+import Cardano.Api qualified as C
 import Data.Generics.Uniplate.Data (universeBi)
 
 bucket :: (Num a, Ord a, Show a, Integral a) => a -> a -> [String]
@@ -344,7 +341,7 @@ instancesForOtherWallets w (IMCons _ (WalletContractHandle w' h) m)
   | w /= w'   = chInstanceId h : instancesForOtherWallets w m
   | otherwise = instancesForOtherWallets w m
 
-activateWallets :: forall state. ContractModel state => (SymToken -> AssetClass) -> [StartContract state] -> EmulatorTrace (Handles state)
+activateWallets :: forall state. ContractModel state => (SymToken -> C.AssetId) -> [StartContract state] -> EmulatorTrace (Handles state)
 activateWallets _ [] = return IMNil
 activateWallets sa (StartContract key params : starts) = do
     let wallet = instanceWallet key
@@ -410,7 +407,7 @@ instance ContractModel state => Show (SomeContractInstanceKey state) where
   showsPrec d (Key k) = showsPrec d k
 
 type SpecificationEmulatorTrace a =
-        Eff '[ Writer [(String, AssetClass)]
+        Eff '[ Writer [(String, C.AssetId)]
              , RunContract
              , Assert
              , Waiting
@@ -532,7 +529,7 @@ class ( Typeable state
 
     -- | Map a `ContractInstanceKey` `k` to the `Contract` that is started when we start
     -- `k` in a given `ModelState` with a given semantics of `SymToken`s
-    instanceContract :: (SymToken -> AssetClass)
+    instanceContract :: (SymToken -> C.AssetId)
                      -> ContractInstanceKey state w s e p
                      -> p
                      -> Contract w s e ()
@@ -541,7 +538,7 @@ class ( Typeable state
     --   running the actions in the emulator (see "Plutus.Trace.Emulator"). It gets access to the
     --   wallet contract handles, the current model state, and the action to be performed.
     perform :: HandleFun state  -- ^ Function from `ContractInstanceKey` to `ContractHandle`
-            -> (SymToken -> AssetClass) -- ^ Map from symbolic tokens (that may appear in actions or the state)
+            -> (SymToken -> C.AssetId) -- ^ Map from symbolic tokens (that may appear in actions or the state)
                                         -- to assset class of actual blockchain token
             -> ModelState state -- ^ The model state before peforming the action
             -> Action state     -- ^ The action to perform
@@ -753,7 +750,7 @@ createToken key = Spec $ do
 
 -- | Register the real token corresponding to a symbolic token created
 -- in `createToken`.
-registerToken :: String -> AssetClass -> SpecificationEmulatorTrace ()
+registerToken :: String -> C.AssetId -> SpecificationEmulatorTrace ()
 registerToken s ac = tell [(s, ac)]
 
 -- | `delay n` delays emulator execution by `n` slots
@@ -770,7 +767,7 @@ handle handles key =
         Just (WalletContractHandle _ h) -> h
         Nothing                         -> error $ "handle: No handle for " ++ show key
 
-type AssetMap = Map AssetKey (Map String AssetClass)
+type AssetMap = Map AssetKey (Map String C.AssetId)
 
 -- | The `EmulatorTrace` monad does not let you get the result of a computation out, but the way
 --   "Test.QuickCheck.Monadic" is set up requires you to provide a function @m Property -> Property@.
@@ -1514,7 +1511,7 @@ propRunActions_ actions =
 -- to write `ContractModel`s that keep track of balances.
 defaultCheckOptionsContractModel :: CheckOptions
 defaultCheckOptionsContractModel =
-  defaultCheckOptions & emulatorConfig . initialChainState .~ (Left . Map.fromList $ zip knownWallets (repeat (Ada.lovelaceValueOf 100_000_000_000_000_000)))
+  defaultCheckOptions & emulatorConfig . initialChainState .~ (Left . Map.fromList $ zip knownWallets (repeat (C.lovelaceToValue (C.Lovelace 100_000_000_000_000_000))))
 
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
 --   wallet balance changes, and that the given `TracePredicate` holds at the end. Equivalent to:
@@ -1652,17 +1649,17 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
                   return (SymToken outerVar idx)
                 initialValue = fold (dist ^. at w)
                 dlt' = toValue lookup sval
-                finalValue = finalValue' P.+ fees
-                dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) allWalletsTxOutCosts
-                result = initialValue P.+ dlt == finalValue
+                finalValue = finalValue' <> C.lovelaceToValue fees
+                dlt = calculateDelta dlt' (C.selectLovelace initialValue) (C.selectLovelace finalValue) allWalletsTxOutCosts
+                result = initialValue <> dlt == finalValue
             unless result $ do
                 tell @(Doc Void) $ vsep $
                     [ "Expected funds of" <+> pretty w <+> "to change by"
                     , " " <+> viaShow sval] ++
                     if initialValue == finalValue
                     then ["but they did not change"]
-                    else ["but they changed by", " " <+> viaShow (toSymVal invLookup (finalValue P.- initialValue)),
-                          "a discrepancy of",    " " <+> viaShow (toSymVal invLookup (finalValue P.- initialValue P.- dlt))]
+                    else ["but they changed by", " " <+> viaShow (toSymVal invLookup (finalValue <> C.negateValue initialValue)),
+                          "a discrepancy of",    " " <+> viaShow (toSymVal invLookup (finalValue <> C.negateValue (initialValue <> dlt)))]
             pure result
           _ -> error "I am the pope"
 

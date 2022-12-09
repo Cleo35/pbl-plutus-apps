@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeOperators         #-}
 module Wallet.Emulator.NodeClient where
 
+import Cardano.Api qualified as C
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logInfo)
@@ -28,7 +29,7 @@ import Wallet.Effects (NodeClientEffect (..))
 import Wallet.Emulator.Chain
 
 data NodeClientEvent =
-    TxSubmit TxId Value
+    TxSubmit TxId C.Lovelace
     -- ^ A transaction has been added to the pool of pending transactions. The value is the fee of the transaction.
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)

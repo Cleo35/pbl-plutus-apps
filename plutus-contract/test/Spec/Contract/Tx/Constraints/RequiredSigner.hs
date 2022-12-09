@@ -22,6 +22,7 @@ import Ledger.Constraints.OnChain.V2 qualified as Constraints
 import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as TxCons
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, changeInitialWalletValue,
                              checkPredicateOptions, defaultCheckOptions, mockWalletPaymentPubKeyHash, w1, w2)
@@ -212,7 +213,7 @@ cardanoTxOwnWallet =
             void $ Trace.activateContractWallet w1 $ cardanoTxOwnWalletContract w1PubKey w1PubKey
             void Trace.nextSlot
     in checkPredicateOptions
-        (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+        (changeInitialWalletValue w1 (const $ Value.adaValueOf 1000) defaultCheckOptions)
         "own wallet's signature passes on-chain mustBeSignedBy validation with cardano tx"
         (assertValidatedTransactionCount 2)
         (void trace)
@@ -225,7 +226,7 @@ cardanoTxOtherWalletNoSigningProcess =
     in checkPredicateOptions
         -- Needed to manually balance the transaction
         -- We may remove it once PLT-321
-        (changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000) defaultCheckOptions)
+        (changeInitialWalletValue w1 (const $ Value.adaValueOf 1000) defaultCheckOptions)
         "without Trace.setSigningProcess fails phase-1 validation"
         (assertFailedTransaction (\_ err -> case err of {Ledger.CardanoLedgerValidationError msg -> Text.isInfixOf "MissingRequiredSigners" msg; _ -> False  }))
         (void trace)

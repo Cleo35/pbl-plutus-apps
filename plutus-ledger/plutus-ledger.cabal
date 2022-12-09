@@ -93,6 +93,7 @@ library
     Ledger.Typed.Tx
     Ledger.Typed.TypeUtils
     Ledger.Validation
+    Ledger.Value.CardanoAPI
     Ledger.Value.Orphans
     Prettyprinter.Extras
 
@@ -152,7 +153,6 @@ library
     , containers
     , cryptonite         >=0.25
     , data-default
-    , deepseq
     , either
     , flat
     , hashable

@@ -15,6 +15,7 @@ import Control.Lens (At (at), _1, _head, filtered, has, makeClassyPrisms, non, o
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
+import Cardano.Api qualified as C
 import Data.Default (Default (def))
 import Data.Map qualified as M
 import Data.Maybe (catMaybes)
@@ -31,6 +32,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Tx.Cons
 import Ledger.Tx.Constraints qualified as TxCons
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.ChainIndex.Emulator (diskState)
 import Plutus.ChainIndex.Emulator.DiskState (addressMap, unCredentialMap)
 import Plutus.Contract as Con
@@ -47,7 +49,6 @@ import Plutus.Script.Utils.V2.Address qualified as PSU.V2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
@@ -95,8 +96,8 @@ v2FeaturesTests sub t = testGroup "Plutus V2 features" $
 evaluationError :: Text.Text -> L.ValidationError -> Bool
 evaluationError errCode = has $ L._ScriptFailure . _EvaluationError . _1 . _head . only errCode
 
-tknValue :: PSU.Language -> Value.Value
-tknValue l = Value.singleton (PSU.scriptCurrencySymbol $ getVersionedScript MustReferenceOutputPolicy l) "mint-me" 1
+tknValue :: PSU.Language -> C.Value
+tknValue l = Value.singleton (Value.policyId $ getVersionedScript MustReferenceOutputPolicy l) "mint-me" 1
 
 nonExistentTxoRef :: Tx.TxOutRef
 nonExistentTxoRef =
@@ -120,7 +121,7 @@ mustReferenceOutputContract submitTxFromConstraints l offChainTxoRefs onChainTxo
     let lookups1 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
             <> Cons.unspentOutputs (M.fromList $ catMaybes lookups)
         tx1 = mconcat mustReferenceOutputs
-           <> Cons.mustMintValueWithRedeemer (asRedeemer onChainTxoRefs) (tknValue l)
+           <> Cons.mustMintValueWithRedeemer (asRedeemer onChainTxoRefs) (Value.fromCardanoValue $ tknValue l)
     ledgerTx1 <- submitTxFromConstraints lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
         where
@@ -165,7 +166,7 @@ phase2FailureWithMustReferenceOutput :: String -> SubmitTx -> PSU.Language -> Te
 phase2FailureWithMustReferenceOutput testDescription submitTxFromConstraints l =
     let contractWithoutOffchainConstraint = do
             let lookups1 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
-                tx1 = Cons.mustMintValueWithRedeemer (asRedeemer [nonExistentTxoRef]) (tknValue l)
+                tx1 = Cons.mustMintValueWithRedeemer (asRedeemer [nonExistentTxoRef]) (Value.fromCardanoValue $ tknValue l)
             ledgerTx1 <- submitTxFromConstraints lookups1 tx1
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
 
@@ -228,7 +229,7 @@ mustReferenceOutputWithSingleScriptOutput submitTxFromConstraints l =
                 lookups2 = Cons.mintingPolicy (getVersionedScript MustReferenceOutputPolicy l)
                         <> Cons.unspentOutputs scriptUtxos
                 tx2 = Cons.mustReferenceOutput scriptUtxo
-                   <> Cons.mustMintValueWithRedeemer (asRedeemer [scriptUtxo]) (tknValue l)
+                   <> Cons.mustMintValueWithRedeemer (asRedeemer [scriptUtxo]) (Value.fromCardanoValue $ tknValue l)
             ledgerTx2 <- submitTxFromConstraints lookups2 tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
@@ -325,8 +326,8 @@ mustReferenceOutputV1ValidatorAddress =
 txConstraintsTxBuildFailWhenUsingV1Script :: TestTree
 txConstraintsTxBuildFailWhenUsingV1Script =
     checkPredicate "Tx.Constraints.mustReferenceOutput fails when trying to unlock funds in a PlutusV1 script"
-        (walletFundsChange w1 (Ada.adaValueOf (-5))
-        .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Ada.adaValueOf 5)
+        (walletFundsChange w1 (Value.adaValueOf (-5))
+        .&&. valueAtAddress mustReferenceOutputV1ValidatorAddress (== Value.adaValueOf 5)
         .&&. assertValidatedTransactionCountOfTotal 1 2
         ) $ do
             void $ Trace.activateContract w1 mustReferenceOutputTxV1Contract tag
@@ -379,8 +380,8 @@ mustReferenceOutputV2ValidatorAddress =
 txConstraintsCanUnlockFundsWithV2Script :: TestTree
 txConstraintsCanUnlockFundsWithV2Script =
     checkPredicate "Tx.Constraints.mustReferenceOutput can be used on-chain to unlock funds in a PlutusV2 script"
-        (walletFundsChange w1 (Ada.adaValueOf 0)
-        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Ada.adaValueOf 0)
+        (walletFundsChange w1 (Value.adaValueOf 0)
+        .&&. valueAtAddress mustReferenceOutputV2ValidatorAddress (== Value.adaValueOf 0)
         .&&. assertValidatedTransactionCount 2
         ) $ do
             void $ Trace.activateContract w1 mustReferenceOutputTxV2Contract tag
