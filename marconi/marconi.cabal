@@ -46,6 +46,7 @@ library
     Marconi.CLI
     Marconi.Index.Datum
     Marconi.Index.EpochStakepoolSize
+    Marconi.Index.MintBurn
     Marconi.Index.ScriptTx
     Marconi.Index.Utxo
     Marconi.Indexers
