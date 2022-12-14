@@ -20,13 +20,11 @@ import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readT
 import Control.Lens.Operators ((^.))
 import Control.Monad (void)
 import Control.Monad.Trans.Class (lift)
-import Data.Foldable (foldl')
+import Data.Function ((&))
 import Data.List (findIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import Data.Set (Set)
-import Data.Set qualified as Set
+import Data.Maybe (fromMaybe, mapMaybe)
 import Database.SQLite.Simple qualified as SQL
 import Streaming.Prelude qualified as S
 
@@ -37,7 +35,7 @@ import "cardano-api" Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Cardano.Streaming qualified as CS
-import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
+import Control.Concurrent.STM.TMVar (TMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.EpochStakepoolSize qualified as EpochStakepoolSize
