@@ -1,17 +1,28 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
+
 module Marconi.Index.MintBurn where
 
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Cardano.Ledger.Alonzo.Data qualified as L
-import Cardano.Ledger.Alonzo.Scripts qualified as LA
-import Cardano.Ledger.Alonzo.TxWitness qualified as L
-import Cardano.Ledger.Core qualified as L
 import Control.Monad.IO.Class (liftIO)
 import Data.Map qualified as Map
 import Data.Word (Word64)
 import Database.SQLite.Simple qualified as SQL
+
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+
+import Cardano.Ledger.Core qualified as LCore
+import Cardano.Ledger.Crypto qualified as LCrypto
+import Cardano.Ledger.Era qualified as LEra
+
+import Cardano.Ledger.Alonzo qualified as LA
+import Cardano.Ledger.Alonzo.Scripts qualified as LA
+import Cardano.Ledger.Alonzo.Tx qualified as LA
+import Cardano.Ledger.Alonzo.TxWitness qualified as LA
+
 
 data TxMintEvent = TxMintEvent
   { txMintEventSlot         :: C.SlotNo
@@ -56,28 +67,72 @@ toUpdate (C.BlockInMode (C.Block (C.BlockHeader slotNo _ blockNo) txs :: C.Block
 
   -- From real TxBody
   let
-    scripts@(s1 : _) = txScripts txb :: [L.Script (C.ShelleyLedgerEra era)]
+    scripts@(s1 : _) = txScripts txb :: [LCore.Script (C.ShelleyLedgerEra era)]
 
     rm = txRedeemers txb
     rl = Map.assocs rm -- ptr word is index of script?
-    _ = map (\((L.RdmrPtr tag w), _) -> undefined) rl
+    _ = map (\((LA.RdmrPtr tag w), _) -> undefined) rl
     _ = txDatums txb
 
   pure $ mkTxMintEvent policyId assetName quantity undefined undefined
+
+  -- From real Tx 2
+  let
+    _ = txb :: C.TxBody era
+    _ = case txb of
+      C.ShelleyTxBody era tx _ _ _ _ -> let
+        _ = era :: C.ShelleyBasedEra era
+        _ = tx :: LCore.TxBody (C.ShelleyLedgerEra era)
+--        _ = getLedgerEraConstraint era $ let LA.TxBody{} = tx in undefined
+        _ = case era of
+          C.ShelleyBasedEraShelley -> undefined
+          C.ShelleyBasedEraAllegra -> undefined
+          C.ShelleyBasedEraMary -> undefined
+          C.ShelleyBasedEraAlonzo -> let
+
+            tx'@(LA.TxBody{}) = tx
+            _ = tx' :: (eraL ~ LA.AlonzoEra LCrypto.StandardCrypto, LEra.Era eraL) => LA.TxBody eraL
+            _ = tx' :: _
+
+--            f :: LEra.Era era => tx0 -> LA.ScriptPurpose (LEra.Crypto era) -> Maybe (LA.Data era, LA.ExUnits)
+--            f a b = LA.indexedRdmrs a b
+
+--            _ = f tx' undefined
+
+            in undefined -- undefined
+          C.ShelleyBasedEraBabbage -> undefined
+
+
+
+--
+
+--         _ = getLedgerEraConstraint era $ let
+--           tx1 = tx :: (L.Era (C.ShelleyLedgerEra era), C.ShelleyLedgerEra era ~ erax) => L.TxBody erax
+--           LA.TxBody{} = tx1
+
+-- --          _ = LA.indexedRdmrs tx1 undefined
+--           in undefined
+
+        in undefined -- getLedgerEraConstraint era $ \lera -> undefined
+        -- let
+        --   _ =
+        --   in undefined
+
+  undefined
   where
 
     -- * TxBody part getters
 
 --    txRedeemers :: C.TxBody era -> [L.Data (C.ShelleyLedgerEra era)]
     txRedeemers (C.ShelleyTxBody _ _ _ txScriptData _ _) = case txScriptData of
-      C.TxBodyScriptData _proof datum redeemers -> L.unRedeemers redeemers
+      C.TxBodyScriptData _proof datum redeemers -> LA.unRedeemers redeemers
 
     -- UNUSED
-    txDatums :: C.TxBody era -> [L.Data (C.ShelleyLedgerEra era)]
+    txDatums :: C.TxBody era -> [LA.Data (C.ShelleyLedgerEra era)]
     txDatums (C.ShelleyTxBody _ _ _ txScriptData _ _) = case txScriptData of
-      C.TxBodyScriptData _proof datums redeemers -> Map.elems $ L.unTxDats datums
+      C.TxBodyScriptData _proof datums redeemers -> Map.elems $ LA.unTxDats datums
 
-    txScripts :: C.TxBody era -> [L.Script (C.ShelleyLedgerEra era)]
+    txScripts :: C.TxBody era -> [LCore.Script (C.ShelleyLedgerEra era)]
     txScripts (C.ShelleyTxBody _ _ scripts _ _ _) = scripts
 
     txOutValue :: C.TxOut ctx era -> [(C.PolicyId, C.AssetName, C.Quantity)]
@@ -129,3 +184,10 @@ sqliteInsert c _ = do
 -- | RedeemerIdx -- The index of the redeemer pointer in the transaction
 -- | BlockNumber -- Block number this transaction occured
 -- | Slot -- Slot this transaction occured
+
+getLedgerEraConstraint :: C.ShelleyBasedEra era -> (LEra.Era (C.ShelleyLedgerEra era) => a) -> a
+getLedgerEraConstraint C.ShelleyBasedEraShelley f = f
+getLedgerEraConstraint C.ShelleyBasedEraAllegra f = f
+getLedgerEraConstraint C.ShelleyBasedEraMary f    = f
+getLedgerEraConstraint C.ShelleyBasedEraAlonzo f  = f
+getLedgerEraConstraint C.ShelleyBasedEraBabbage f = f
