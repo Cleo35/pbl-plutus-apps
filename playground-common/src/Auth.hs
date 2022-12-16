@@ -37,6 +37,7 @@ module Auth
 
 import Auth.Types (OAuthClientId, OAuthClientSecret, OAuthCode, OAuthToken, Token (Token), TokenProvider (Github),
                    addUserAgent, oAuthTokenAccessToken)
+import BrowserHeader (BrowserHeader)
 import Control.Lens (_1, _2, makeLenses, view)
 import Control.Monad (guard)
 import Control.Monad.Except (MonadError)
@@ -67,7 +68,6 @@ import Network.HTTP.Types (hAccept, statusIsSuccessful)
 import Network.HTTP.Types.Status (status404)
 import Servant (Get, Header, Headers, JSON, NoContent (NoContent), QueryParam, ServerError, ServerT, StdMethod (GET),
                 ToHttpApiData, Verb, addHeader, err401, err404, err500, errBody, throwError, (:<|>) ((:<|>)), (:>))
-import Servant.API.BrowserHeader (BrowserHeader)
 import Servant.Client (BaseUrl, ClientError (FailureResponse), ClientM, mkClientEnv, parseBaseUrl, responseStatusCode,
                        runClientM)
 import Web.Cookie (SetCookie, defaultSetCookie, parseCookies, setCookieExpires, setCookieHttpOnly, setCookieMaxAge,

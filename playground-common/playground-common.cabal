@@ -29,6 +29,7 @@ library
     Schema
     Servant.Extra
 
+  other-modules:      BrowserHeader
   hs-source-dirs:     src
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
@@ -65,7 +66,7 @@ library
   build-depends:
       aeson
     , aeson-casing
-    , base                >=4.7  && <5
+    , base               >=4.7  && <5
     , bytestring
     , containers
     , cookie
@@ -88,11 +89,11 @@ library
     , prettyprinter
     , process
     , purescript-bridge
-    , recursion-schemes   <5.2
+    , recursion-schemes  <5.2
     , row-types
-    , servant             >=0.16
+    , servant            >=0.16
     , servant-client
-    , servant-purescript
+    , servant-foreign
     , servant-server
     , streaming
     , template-haskell
