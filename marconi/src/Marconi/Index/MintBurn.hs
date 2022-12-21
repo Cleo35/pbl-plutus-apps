@@ -7,10 +7,12 @@
 module Marconi.Index.MintBurn where
 
 import Control.Monad.IO.Class (liftIO)
+import Data.ByteString.Short qualified as Short
 import Data.Function ((&))
 import Data.Map qualified as Map
 import Data.Word (Word64)
 import Database.SQLite.Simple qualified as SQL
+import Database.SQLite.Simple.ToField qualified as SQL
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
@@ -19,10 +21,15 @@ import Cardano.Ledger.Core qualified as LCore
 import Cardano.Ledger.Crypto qualified as LCrypto
 import Cardano.Ledger.Era qualified as LEra
 
+import Cardano.Ledger.Mary qualified as LM hiding (Value)
+import Cardano.Ledger.ShelleyMA.TxBody qualified as LMA
+
 import Cardano.Ledger.Alonzo qualified as LA
+import Cardano.Ledger.Alonzo.Data qualified as LA
 import Cardano.Ledger.Alonzo.Scripts qualified as LA
 import Cardano.Ledger.Alonzo.Tx qualified as LA
 import Cardano.Ledger.Alonzo.TxWitness qualified as LA
+import Cardano.Ledger.Babbage.Tx qualified as LB
 
 import Ouroboros.Consensus.Shelley.Eras qualified as OEra
 
@@ -55,103 +62,55 @@ toUpdate (C.BlockInMode (C.Block (C.BlockHeader slotNo _ blockNo) txs :: C.Block
         , txMintEventQuantity = quantity
         , txMintEventRedeemerIdx = redeemerIx
         , txMintEventRedeemerData = redeemerData
-      }
+        }
 
-  -- AssetId and Quantity from txMintValue
-  -- (assetId, quantity) :: (C.AssetId, C.Quantity) <- case C.txMintValue txbc of
-  --   C.TxMintValue _ (v :: C.Value) _ -> C.valueToList v
-  -- case assetId of
-  --   C.AdaAssetId                 -> []
-  --   C.AssetId policyId assetName -> pure $ mkTxMintEvent policyId assetName quantity undefined undefined
+  case txb of
+    C.ShelleyTxBody era shelleyTx _ _ _ _ -> case era of
+      C.ShelleyBasedEraShelley -> []
+      C.ShelleyBasedEraAllegra -> []
+      C.ShelleyBasedEraMary -> []
+      C.ShelleyBasedEraAlonzo -> do
+        (policyId, assetName, quantity, index, redeemer) <- getPolicyData txb $ LA.mint shelleyTx
+        pure $ mkTxMintEvent policyId assetName quantity index redeemer
+      C.ShelleyBasedEraBabbage -> do
+        (policyId, assetName, quantity, index, redeemer) <- getPolicyData txb $ LB.mint shelleyTx
+        pure $ mkTxMintEvent policyId assetName quantity index redeemer
+    _ -> [] -- ByronTxBody is not exported but as it's the only other data constructor then _ matches it.
 
-  -- From TxBodyContent{txOuts}: But this is WRONG, as this only transfers already existing asset
-  -- txOut <- C.txOuts txbc
-  -- (policyId, assetName, quantity) <- txOutValue txOut
-  -- pure $ mkTxMintEvent policyId assetName quantity undefined undefined
+-- * Helpers
 
-  -- From real TxBody
-  -- let
-  --   scripts@(s1 : _) = txScripts txb :: [LCore.Script (C.ShelleyLedgerEra era)]
+txRedeemers :: C.TxBody era -> Map.Map LA.RdmrPtr (LA.Data (C.ShelleyLedgerEra era), LA.ExUnits)
+txRedeemers (C.ShelleyTxBody _ _ _ txScriptData _ _) = case txScriptData of
+  C.TxBodyScriptData _proof datum redeemers -> LA.unRedeemers redeemers
 
-  --   rm = txRedeemers txb
-  --   rl = Map.assocs rm -- ptr word is index of script?
-  --   _ = map (\((LA.RdmrPtr tag w), _) -> undefined) rl
-  --   _ = txDatums txb
+mintRedeemers :: C.TxBody era -> [(Word64, (LA.Data (C.ShelleyLedgerEra era), LA.ExUnits))]
+mintRedeemers txb = txRedeemers txb
+  & Map.toList
+  & filter (\(LA.RdmrPtr tag _, _) -> tag == LA.Mint)
+  & map (\(LA.RdmrPtr _ w, a) -> (w, a))
 
-  -- pure $ mkTxMintEvent policyId assetName quantity undefined undefined
+getMaryOtherAssets :: LM.Value c -> Map.Map (LM.PolicyID c) (Map.Map LM.AssetName Integer)
+getMaryOtherAssets (LM.Value _ m) = m
 
-  -- From real Tx 2
+getPolicyData :: C.TxBody era -> LM.Value OEra.StandardCrypto -> [(C.PolicyId, C.AssetName, C.Quantity, Word64, C.ScriptData)]
+getPolicyData txb value = do
   let
-    _ = txb :: C.TxBody era
-    result = case txb of
-      C.ShelleyTxBody era tx _ _ _ _ -> let
-        -- _ = era :: C.ShelleyBasedEra era
-        -- _ = tx :: LCore.TxBody (C.ShelleyLedgerEra era)
-        in case era of
-          C.ShelleyBasedEraShelley -> []
-          C.ShelleyBasedEraAllegra -> []
-          C.ShelleyBasedEraMary -> []
-          C.ShelleyBasedEraAlonzo -> let
-              mintRedeemers :: [(Word64, (LA.Data (C.ShelleyLedgerEra C.AlonzoEra), LA.ExUnits))]
-              mintRedeemers = txRedeemers txb
-                & Map.toList
-                & filter (\(LA.RdmrPtr tag _, _) -> tag == LA.Mint)
-                & map (\(LA.RdmrPtr _ w, a) -> (w, a))
-              LM.Value _ m = LA.mint tx :: LM.Value (LEra.Crypto (LA.AlonzoEra LCrypto.StandardCrypto))
-              _ = m :: Map.Map (LM.PolicyID LCrypto.StandardCrypto) (Map.Map LM.AssetName Integer)
-              policyIdList = Map.toList m
-              policyRedeemers :: [((LM.PolicyID LCrypto.StandardCrypto, Map.Map LM.AssetName Integer), (LA.Data OEra.StandardAlonzo, LA.ExUnits))]
-              policyRedeemers = map (\(index, data_) -> (policyIdList !! fromIntegral index, data_)) mintRedeemers
+    policyIdList = Map.toList $ getMaryOtherAssets value
+    getPolicyId index = policyIdList !! fromIntegral index
+  ((maryPolicyID, assets), index, (redeemer, _)) <- map (\(index, data_) -> (getPolicyId index, index, data_)) $ mintRedeemers txb
+  (assetName, quantity) :: (LM.AssetName, Integer) <- Map.toList assets
+  pure $ (fromMaryPolicyID maryPolicyID, fromMaryAssetName assetName, C.Quantity quantity, index, fromAlonzoData redeemer)
 
-            in policyRedeemers
+-- ** Copy-paste
 
-          C.ShelleyBasedEraBabbage -> []
+fromMaryPolicyID :: LM.PolicyID OEra.StandardCrypto -> C.PolicyId
+fromMaryPolicyID (LM.PolicyID sh) = C.PolicyId (C.fromShelleyScriptHash sh) -- file:/home/iog/src/cardano-node/cardano-api/src/Cardano/Api/Value.hs::293
 
-      _ -> [] -- ByronTxBody is not exported but as it's the only other data constructor then _ matches it.
+fromMaryAssetName :: LM.AssetName -> C.AssetName
+fromMaryAssetName (LM.AssetName n) = C.AssetName $ Short.fromShort n -- file:/home/iog/src/cardano-node/cardano-api/src/Cardano/Api/Value.hs::296
 
-  ((LM.PolicyID scriptHash, _), (redeemer, _)) :: ((LM.PolicyID LCrypto.StandardCrypto, Map.Map LM.AssetName Integer), (LA.Data OEra.StandardAlonzo, LA.ExUnits)) <- result
-
-  let _ = mkTxMintEvent policyId
-
-  undefined
-  where
-
-    -- * TxBody part getters
-
-    txRedeemers :: C.TxBody era -> Map.Map LA.RdmrPtr (LA.Data (C.ShelleyLedgerEra era), LA.ExUnits)
-    txRedeemers (C.ShelleyTxBody _ _ _ txScriptData _ _) = case txScriptData of
-      C.TxBodyScriptData _proof datum redeemers -> LA.unRedeemers redeemers
-
-    -- UNUSED
-    -- txDatums :: C.TxBody era -> [LA.Data (C.ShelleyLedgerEra era)]
-    -- txDatums (C.ShelleyTxBody _ _ _ txScriptData _ _) = case txScriptData of
-    --   C.TxBodyScriptData _proof datums redeemers -> Map.elems $ LA.unTxDats datums
-
-    -- txScripts :: C.TxBody era -> [LCore.Script (C.ShelleyLedgerEra era)]
-    -- txScripts (C.ShelleyTxBody _ _ scripts _ _ _) = scripts
-
-    -- txOutValue :: C.TxOut ctx era -> [(C.PolicyId, C.AssetName, C.Quantity)]
-    -- txOutValue txOut =  case txOut of
-    --   C.TxOut _proof value' _datum _referenceScript -> case value' of
-    --     C.TxOutAdaOnly _proof _lovelace -> undefined
-    --     C.TxOutValue _proof value''     -> fromValue value''
-
-
---    f2 :: C.TxBodyContent build era -> [(C.AssetId, C.Quantity)]
-    -- f2 txbc = case C.txMintValue txbc of
-    --   C.TxMintValue _ value _ -> C.valueToList value
-
-    -- fromValue :: C.Value -> [(C.PolicyId, C.AssetName, C.Quantity)]
-    -- fromValue value = do
-    --   (assetId, quantity) <- C.valueToList value
-    --   case assetId of
-    --     C.AdaAssetId                 -> []
-    --     C.AssetId policyId assetName -> pure (policyId, assetName, quantity)
-
-    -- * Real TxBody
-
-
-
+fromAlonzoData :: LA.Data ledgerera -> C.ScriptData
+fromAlonzoData = C.fromPlutusData . LA.getPlutusData -- file:/home/iog/src/cardano-node/cardano-api/src/Cardano/Api/ScriptData.hs::147
 
 -- * Sqlite
 
@@ -161,8 +120,49 @@ sqliteCreateTable c = do
     "CREATE TABLE IF NOT EXISTS minting_policy_event_table (TxId BLOB NOT NULL, PolicyId BLOB NOT NULL, AssetName STRING?, Quantity INT NOT NULL, RedeemerData, RedeemerIdx, BlockNumber, Slot)"
   undefined
 
+instance SQL.ToField C.SlotNo where
+  toField f = undefined
+
+instance SQL.ToField C.BlockNo where
+  toField f = undefined
+
+instance SQL.ToField C.TxId where
+  toField f = undefined
+
+instance SQL.ToField C.PolicyId where
+  toField f = undefined
+
+instance SQL.ToField C.AssetName where
+  toField f = undefined
+
+instance SQL.ToField C.Quantity where
+  toField f = undefined
+
+-- instance SQL.ToField Word64 where
+--   toField f = undefined
+
+instance SQL.ToField C.ScriptData where
+  toField f = undefined
+
+instance SQL.ToRow TxMintEvent where
+  toRow e = undefined
+    [ SQL.toField $ txMintEventSlot e
+    , SQL.toField $ txMintEventBlockNo e
+    , SQL.toField $ txMintEventTxId e
+    , SQL.toField $ txMintEventPolicyId e
+    , SQL.toField $ txMintEventAssetName e
+    , SQL.toField $ txMintEventQuantity e
+    , SQL.toField $ txMintEventRedeemerIdx e
+    , SQL.toField $ txMintEventRedeemerData e
+    ]
+
 sqliteInsert :: SQL.Connection -> [TxMintEvent] -> IO ()
-sqliteInsert c _ = do
+sqliteInsert c es = do
+  SQL.executeMany c
+    "INSERT INTO minting_policy_event_table \
+    \        (txId, policyId, assetName, quantity, redeemerData, redeemerIdx, blockNumber, slot) \
+    \ VALUES (?   , ?       , ?        , ?       ,             ,            ,            , ?   )"
+    $ map SQL.toRow es
   undefined
 
 --   TxId -- Transaction which executed the minting policy
@@ -173,10 +173,3 @@ sqliteInsert c _ = do
 -- | RedeemerIdx -- The index of the redeemer pointer in the transaction
 -- | BlockNumber -- Block number this transaction occured
 -- | Slot -- Slot this transaction occured
-
-getLedgerEraConstraint :: C.ShelleyBasedEra era -> (LEra.Era (C.ShelleyLedgerEra era) => a) -> a
-getLedgerEraConstraint C.ShelleyBasedEraShelley f = f
-getLedgerEraConstraint C.ShelleyBasedEraAllegra f = f
-getLedgerEraConstraint C.ShelleyBasedEraMary f    = f
-getLedgerEraConstraint C.ShelleyBasedEraAlonzo f  = f
-getLedgerEraConstraint C.ShelleyBasedEraBabbage f = f
