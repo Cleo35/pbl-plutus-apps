@@ -8,4 +8,5 @@
   "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "10pb0yfp80jhb9ryn65a4rha2lxzsn2vlhcc6xphrrkf4x5lhzqc";
   "https://github.com/sevanspowell/hw-aeson"."b5ef03a7d7443fcd6217ed88c335f0c411a05408" = "1dwx90wqavdl4d0npbzbxyh2pzi9zs1qz7nvsrb3n1cm2xbv4i5z";
   "https://github.com/james-iohk/cardano-node"."eb44c868fa4af3cbc9024421393880b6bef49811" = "0w9vy9xn7z3p1ib0ab05avh4c6g74q4j5w2lzflmwjqzyy4dnfax";
+  "https://github.com/james-iohk/cardano-node"."2b6978583b306ad28f7e1226b5d1ad604919c98a" = "06nggf0kpdh3whn6kqpw8s0484xw1q9r964rv125grbmpdx86dah";
 }
