@@ -304,7 +304,7 @@ singleton :: TxConstraint -> TxConstraints i o
 singleton a = mempty { txConstraints = [a] }
 
 {-# INLINABLE mustValidateIn #-}
-{-# DEPRECATED mustValidateIn "Please use mustValidateInSlotRange instead" #-}
+{-# DEPRECATED mustValidateIn "Please use mustValidateInTimeRange or mustValidateInSlotRange instead" #-}
 -- | @mustValidateIn r@ requires the transaction's validity time range to be contained
 --   in @r@.
 --
@@ -328,6 +328,15 @@ mustValidateIn = singleton . MustValidateInTimeRange . fromPlutusInterval
 mustValidateInTimeRange :: forall i o. ValidityInterval POSIXTime -> TxConstraints i o
 mustValidateInTimeRange = singleton . MustValidateInTimeRange
 
+{-# INLINABLE mustValidateInSlotRange #-}
+-- | @mustValidateInSlotRange r@ requires the transaction's validity slot range to be contained
+--   in @r@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint sets the
+-- transaction's validity slot range to @r@.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- slot range @r@ is entirely contained in the transaction's validity time range.
 mustValidateInSlotRange :: forall i o. ValidityInterval Slot -> TxConstraints i o
 mustValidateInSlotRange = singleton . MustValidateInTimeRange . fromPlutusInterval . slotRangeToPOSIXTimeRange def . toPlutusInterval
 
