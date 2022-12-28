@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -Wno-orphans     #-}
@@ -44,47 +45,37 @@ import Cardano.Ledger.Mary.Value qualified as LM
 import RewindableIndex.Index.VSqlite qualified as RewindableIndex
 
 
-newtype Event = Event [TxMintEvent] deriving Show
-
-data TxMintEvent = TxMintEvent
-  { txMintEventSlot    :: C.SlotNo
-  , txMintEventBlockNo :: C.BlockNo
-  , txMintEventTxId    :: C.TxId
-  , txMintEventAssets  :: [MintAssets]
-  } deriving Show
-
-data MintAssets = MintAssets
-  { mintAssetsPolicyId     :: C.PolicyId
-  , mintAssetsAssetName    :: C.AssetName
-  , mintAssetsQuantity     :: C.Quantity
-  , mintAssetsRedeemerIdx  :: Word64
-  , mintAssetsRedeemerData :: C.ScriptData
-  } deriving Show
-
 -- * Event
 
-toUpdate :: C.BlockInMode C.CardanoMode -> [TxMintEvent]
-toUpdate (C.BlockInMode (C.Block (C.BlockHeader slotNo _ blockNo) txs :: C.Block era) _ :: C.BlockInMode C.CardanoMode) = do
+data TxMintEvent = TxMintEvent
+  { txMintEventSlot     :: C.SlotNo
+  , txMintEventBlockNo  :: C.BlockNo
+  , txMintEventTxAssets :: [(C.TxId, [MintAsset])]
+  } deriving Show
+
+data MintAsset = MintAsset
+  { mintAssetPolicyId     :: C.PolicyId
+  , mintAssetAssetName    :: C.AssetName
+  , mintAssetQuantity     :: C.Quantity
+  , mintAssetRedeemerIdx  :: Word64
+  , mintAssetRedeemerData :: C.ScriptData
+  } deriving Show
+
+toUpdate :: C.BlockInMode C.CardanoMode -> TxMintEvent
+toUpdate (C.BlockInMode (C.Block (C.BlockHeader slotNo _ blockNo) txs :: C.Block era) _ :: C.BlockInMode C.CardanoMode) = TxMintEvent slotNo blockNo $ do
   tx@(C.Tx txb@(C.TxBody txbc) _) <- txs
 
-  let mkTxMintEvent assets = TxMintEvent
-        { txMintEventSlot = slotNo
-        , txMintEventBlockNo = blockNo
-        , txMintEventTxId = C.getTxId txb
-        , txMintEventAssets = assets
-        }
-
-  pure $ mkTxMintEvent $ case txb of
+  pure $ (C.getTxId txb,) $ case txb of
     C.ShelleyTxBody era shelleyTx _ _ _ _ -> case era of
       C.ShelleyBasedEraShelley -> []
       C.ShelleyBasedEraAllegra -> []
       C.ShelleyBasedEraMary -> []
       C.ShelleyBasedEraAlonzo -> do
         (policyId, assetName, quantity, index, redeemer) <- getPolicyData txb $ LA.mint shelleyTx
-        pure $ MintAssets policyId assetName quantity index redeemer
+        pure $ MintAsset policyId assetName quantity index redeemer
       C.ShelleyBasedEraBabbage -> do
         (policyId, assetName, quantity, index, redeemer) <- getPolicyData txb $ LB.mint shelleyTx
-        pure $ MintAssets policyId assetName quantity index redeemer
+        pure $ MintAsset policyId assetName quantity index redeemer
     _ -> [] -- ByronTxBody is not exported but as it's the only other data constructor then _ matches it.
 
 -- * Helpers
@@ -125,9 +116,10 @@ fromAlonzoData = C.fromPlutusData . LA.getPlutusData -- file:/home/iog/src/carda
 -- * Sqlite
 
 sqliteInit :: SQL.Connection -> IO ()
-sqliteInit c = do
-  liftIO $ SQL.execute_ c
-    "CREATE TABLE IF NOT EXISTS minting_policy_event_table (TxId BLOB NOT NULL, PolicyId BLOB NOT NULL, AssetName STRING?, Quantity INT NOT NULL, RedeemerData, RedeemerIdx, BlockNumber, Slot)"
+sqliteInit c = liftIO $ SQL.execute_ c
+  " CREATE TABLE IF NOT EXISTS minting_policy_event_table \
+  \ ( Slot INT NOT NULL, BlockNumber INT NOT NULL, TxId BLOB NOT NULL \
+  \ , PolicyId BLOB NOT NULL, AssetName TEXT NOT NULL, Quantity INT NOT NULL, RedeemerIdx INT NOT NULL, RedeemerData BLOB NOT NULL)"
 
 instance SQL.ToField C.SlotNo where
   toField f = SQL.toField (coerce f :: Word64)
@@ -152,17 +144,17 @@ instance SQL.ToField C.ScriptData where
 
 toRows :: TxMintEvent -> [[SQL.SQLData]]
 toRows e = do
-  mintAssets <- txMintEventAssets e
+  (txId, txMintAssets) <- txMintEventTxAssets e
+  mintAsset <- txMintAssets
   pure
     [ SQL.toField $ txMintEventSlot e
     , SQL.toField $ txMintEventBlockNo e
-    , SQL.toField $ txMintEventTxId e
 
-    , SQL.toField $ mintAssetsPolicyId mintAssets
-    , SQL.toField $ mintAssetsAssetName mintAssets
-    , SQL.toField $ mintAssetsQuantity mintAssets
-    , SQL.toField $ mintAssetsRedeemerIdx mintAssets
-    , SQL.toField $ mintAssetsRedeemerData mintAssets
+    , SQL.toField txId
+    , SQL.toField $ mintAssetAssetName mintAsset
+    , SQL.toField $ mintAssetQuantity mintAsset
+    , SQL.toField $ mintAssetRedeemerIdx mintAsset
+    , SQL.toField $ mintAssetRedeemerData mintAsset
     ]
 
 sqliteInsert :: SQL.Connection -> [TxMintEvent] -> IO ()
@@ -177,7 +169,7 @@ sqliteInsert c es = SQL.executeMany c template $ toRows =<< es
 
 type Result = ()
 type Query = ()
-type MintBurnIndex = RewindableIndex.SqliteIndex Event () Query Result
+type MintBurnIndex = RewindableIndex.SqliteIndex TxMintEvent () Query Result
 
 open :: FilePath -> Int -> IO MintBurnIndex
 open dbPath k = do
@@ -188,14 +180,13 @@ open dbPath k = do
   where
     store :: MintBurnIndex -> IO ()
     store indexer = do
-      buffered :: [Event] <- RewindableIndex.getBuffer $ indexer ^. RewindableIndex.storage
-      let events = coerce =<< buffered
-      sqliteInsert (indexer^.RewindableIndex.handle) events
+      buffered <- RewindableIndex.getBuffer $ indexer ^. RewindableIndex.storage
+      sqliteInsert (indexer^.RewindableIndex.handle) buffered
 
-    query :: MintBurnIndex -> Query -> [Event] -> IO Result
+    query :: MintBurnIndex -> Query -> [TxMintEvent] -> IO Result
     query _ _ _ = pure ()
 
-    onInsert :: MintBurnIndex -> Event -> IO [()]
+    onInsert :: MintBurnIndex -> TxMintEvent -> IO [()]
     onInsert _ _ = pure []
 
 --   TxId -- Transaction which executed the minting policy

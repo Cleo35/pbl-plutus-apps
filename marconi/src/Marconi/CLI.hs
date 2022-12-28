@@ -11,6 +11,7 @@ module Marconi.CLI
     , datumDbPath
     , scriptTxDbPath
     , epochStakepoolSizeDbPath
+    , mintBurnDbPath
     ) where
 
 import Cardano.Api (ChainPoint, NetworkId)
@@ -103,6 +104,7 @@ data Options = Options
     optionsDisableDatum         :: Bool,
     optionsDisableScript        :: Bool,
     optionsDisableStakepoolSize :: Bool,
+    optionsDisableMintBurn      :: Bool,
     optionsTargetAddresses      :: Maybe TargetAddresses,
     optionsNodeConfigPath       :: Maybe FilePath
   }
@@ -137,6 +139,10 @@ optionsParser =
                       <> Opt.help "disable epoch stakepool size indexers."
                       <> Opt.showDefault
                      )
+    <*> Opt.switch (Opt.long "disable-mintburn"
+                      <> Opt.help "disable mint/burn indexers."
+                      <> Opt.showDefault
+                     )
     <*> optAddressesParser (Opt.long "addresses-to-index"
                             <> Opt.short 'a'
                             <> Opt.help ("Becch32 Shelley addresses to index."
@@ -162,6 +168,9 @@ scriptTxDbName = "scripttx.db"
 epochStakepoolSizeDbName :: FilePath
 epochStakepoolSizeDbName = "epochstakepool.db"
 
+mintBurnDbName :: FilePath
+mintBurnDbName = "mintburn.db"
+
 utxoDbPath :: Options -> Maybe FilePath
 utxoDbPath o = if optionsDisableUtxo o then Nothing; else Just (optionsDbPath o </> utxoDbName)
 
@@ -173,3 +182,6 @@ scriptTxDbPath o = if optionsDisableScript o then Nothing; else Just (optionsDbP
 
 epochStakepoolSizeDbPath :: Options -> Maybe FilePath
 epochStakepoolSizeDbPath o = if optionsDisableStakepoolSize o then Nothing else Just (optionsDbPath o </> epochStakepoolSizeDbName)
+
+mintBurnDbPath :: Options -> Maybe FilePath
+mintBurnDbPath o = if optionsDisableMintBurn o then Nothing else Just (optionsDbPath o </> mintBurnDbName)

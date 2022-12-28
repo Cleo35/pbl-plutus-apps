@@ -275,15 +275,13 @@ mintBurnWorker Coordinator{_barrier} ch path = MintBurn.open path 2160 >>= inner
       signalQSemN _barrier 1
       event <- atomically $ readTChan ch
       case event of
-        RollForward blockInMode _ct -> do
-          let event = MintBurn.Event $ MintBurn.toUpdate blockInMode
-          Ix.insert event index >>= innerLoop
+        RollForward blockInMode _ct -> Ix.insert (MintBurn.toUpdate blockInMode) index >>= innerLoop
         RollBackward cp _ct -> do
           events <- Ix.getEvents (index ^. Ix.storage)
           innerLoop $
             fromMaybe index $ do
               slot   <- chainPointToSlotNo cp
-              offset <- undefined -- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+              offset <- findIndex  (\e -> MintBurn.txMintEventSlot e < slot) events
               Ix.rewind offset index
 
 combinedIndexer
@@ -291,11 +289,12 @@ combinedIndexer
   -> Maybe FilePath
   -> Maybe FilePath
   -> Maybe FilePath
+  -> Maybe FilePath
   -> Maybe TargetAddresses
   -> Maybe FilePath -- ^ Node config path, required for epoch stakepool size indexer
   -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
   -> IO ()
-combinedIndexer utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTargetAddresses maybeConfigPath = combineIndexers remainingIndexers
+combinedIndexer utxoPath datumPath scriptTxPath epochStakepoolSizePath mintBurnPath maybeTargetAddresses maybeConfigPath = combineIndexers remainingIndexers
   where
     liftMaybe (worker, maybePath) = case maybePath of
       Just path -> Just (worker, path)
@@ -309,6 +308,7 @@ combinedIndexer utxoPath datumPath scriptTxPath epochStakepoolSizePath maybeTarg
             (utxoWorker maybeTargetAddresses, utxoPath)
             , (datumWorker, datumPath)
             , (scriptTxWorker (\_ _ -> pure []), scriptTxPath)
+            , (mintBurnWorker, mintBurnPath)
         ] <> epochStakepoolSizeIndexer
 
     remainingIndexers = mapMaybe liftMaybe pairs
