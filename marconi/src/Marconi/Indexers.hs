@@ -216,6 +216,8 @@ utxoWorker maybeTargetAddresses Coordinator{_barrier} ch path =
               offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
               Ix.rewind offset index
 
+-- * ScriptTx indexer
+
 scriptTxWorker_
   :: (ScriptTx.ScriptTxIndex -> ScriptTx.ScriptTxUpdate -> IO [()])
   -> ScriptTx.Depth
@@ -245,6 +247,8 @@ scriptTxWorker
 scriptTxWorker onInsert coordinator ch path = do
   (loop, _) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator ch path
   loop
+
+-- * Epoch stakepool size indexer
 
 epochStakepoolSizeWorker :: FilePath -> Worker
 epochStakepoolSizeWorker configPath Coordinator{_barrier} tchan dbPath = do
