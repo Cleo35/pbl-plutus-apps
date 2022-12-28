@@ -40,6 +40,7 @@ import Control.Concurrent.STM.TMVar (TMVar, putTMVar)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.EpochStakepoolSize qualified as EpochStakepoolSize
+import Marconi.Index.MintBurn qualified as MintBurn
 import Marconi.Index.ScriptTx qualified as ScriptTx
 import Marconi.Index.Utxo (TxOut, UtxoIndex, UtxoUpdate (UtxoUpdate, _inputs, _outputs, _slotNo))
 import Marconi.Index.Utxo qualified as Utxo
@@ -264,6 +265,26 @@ epochStakepoolSizeWorker configPath Coordinator{_barrier} tchan dbPath = do
       S.yield =<< (lift $ atomically $ readTChan tchan)
       chainSyncEvents
 
+-- * Mint/burn indexer
+
+mintBurnWorker :: Worker
+mintBurnWorker Coordinator{_barrier} ch path = MintBurn.open path 2160 >>= innerLoop
+  where
+    innerLoop :: MintBurn.MintBurnIndex -> IO ()
+    innerLoop index = do
+      signalQSemN _barrier 1
+      event <- atomically $ readTChan ch
+      case event of
+        RollForward blockInMode _ct -> do
+          let event = MintBurn.Event $ MintBurn.toUpdate blockInMode
+          Ix.insert event index >>= innerLoop
+        RollBackward cp _ct -> do
+          events <- Ix.getEvents (index ^. Ix.storage)
+          innerLoop $
+            fromMaybe index $ do
+              slot   <- chainPointToSlotNo cp
+              offset <- undefined -- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+              Ix.rewind offset index
 
 combinedIndexer
   :: Maybe FilePath
