@@ -2,12 +2,16 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
+{-# OPTIONS_GHC -Wno-orphans     #-}
 
 module Marconi.Index.MintBurn where
 
 import Control.Monad.IO.Class (liftIO)
+import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as Short
+import Data.Coerce
 import Data.Function ((&))
 import Data.Map qualified as Map
 import Data.Word (Word64)
@@ -118,34 +122,30 @@ sqliteCreateTable :: SQL.Connection -> IO ()
 sqliteCreateTable c = do
   liftIO $ SQL.execute_ c
     "CREATE TABLE IF NOT EXISTS minting_policy_event_table (TxId BLOB NOT NULL, PolicyId BLOB NOT NULL, AssetName STRING?, Quantity INT NOT NULL, RedeemerData, RedeemerIdx, BlockNumber, Slot)"
-  undefined
 
 instance SQL.ToField C.SlotNo where
-  toField f = undefined
+  toField f = SQL.toField (coerce f :: Word64)
 
 instance SQL.ToField C.BlockNo where
-  toField f = undefined
+  toField f = SQL.toField (coerce f :: Word64)
 
 instance SQL.ToField C.TxId where
-  toField f = undefined
+  toField = SQL.toField . C.serialiseToRawBytes
 
 instance SQL.ToField C.PolicyId where
-  toField f = undefined
+  toField = SQL.toField . C.serialiseToRawBytes
 
 instance SQL.ToField C.AssetName where
-  toField f = undefined
+  toField f = SQL.toField (coerce f :: BS.ByteString)
 
 instance SQL.ToField C.Quantity where
-  toField f = undefined
-
--- instance SQL.ToField Word64 where
---   toField f = undefined
+  toField f = SQL.toField (coerce f :: Integer)
 
 instance SQL.ToField C.ScriptData where
-  toField f = undefined
+  toField = SQL.toField . C.serialiseToCBOR
 
 instance SQL.ToRow TxMintEvent where
-  toRow e = undefined
+  toRow e =
     [ SQL.toField $ txMintEventSlot e
     , SQL.toField $ txMintEventBlockNo e
     , SQL.toField $ txMintEventTxId e
@@ -157,13 +157,14 @@ instance SQL.ToRow TxMintEvent where
     ]
 
 sqliteInsert :: SQL.Connection -> [TxMintEvent] -> IO ()
-sqliteInsert c es = do
-  SQL.executeMany c
-    "INSERT INTO minting_policy_event_table \
-    \        (txId, policyId, assetName, quantity, redeemerData, redeemerIdx, blockNumber, slot) \
-    \ VALUES (?   , ?       , ?        , ?       ,             ,            ,            , ?   )"
-    $ map SQL.toRow es
-  undefined
+sqliteInsert c es = SQL.executeMany c template $ map SQL.toRow es
+  where
+    template =
+      "INSERT INTO minting_policy_event_table \
+      \        (txId, policyId, assetName, quantity, redeemerData, redeemerIdx, blockNumber, slot) \
+      \ VALUES (?   , ?       , ?        , ?       , ?           , ?          , ?          , ?   )"
+
+
 
 --   TxId -- Transaction which executed the minting policy
 -- | PolicyId -- Minting policy hash - Part of the AssetId
